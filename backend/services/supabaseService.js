@@ -124,32 +124,49 @@ class SupabaseFileService {
     // Delete file from storage and database
     async deleteFile(fileId) {
         try {
-            // Get file info first
+            console.log('Deleting file with ID:', fileId);
+            
+            // Get file info first (without .single() to avoid errors)
             const { data: fileData, error: fetchError } = await this.supabase
                 .from('files')
                 .select('file_path')
-                .eq('id', fileId)
-                .single();
+                .eq('id', fileId);
 
-            if (fetchError) throw fetchError;
-
-            // Delete from storage
-            const { error: storageError } = await this.supabase.storage
-                .from(this.bucketName)
-                .remove([fileData.file_path]);
-
-            if (storageError) {
-                console.warn('Storage delete error:', storageError);
+            if (fetchError) {
+                console.error('Fetch error:', fetchError);
+                throw fetchError;
             }
 
-            // Delete from database
+            // Check if file exists
+            if (!fileData || fileData.length === 0) {
+                console.log('File not found in database, proceeding with database cleanup only');
+            } else {
+                // Delete from storage
+                const filePath = fileData[0].file_path;
+                console.log('Deleting from storage:', filePath);
+                
+                const { error: storageError } = await this.supabase.storage
+                    .from(this.bucketName)
+                    .remove([filePath]);
+
+                if (storageError) {
+                    console.warn('Storage delete error:', storageError);
+                }
+            }
+
+            // Delete from database (always try this)
+            console.log('Deleting from database...');
             const { error: dbError } = await this.supabase
                 .from('files')
                 .delete()
                 .eq('id', fileId);
 
-            if (dbError) throw dbError;
+            if (dbError) {
+                console.error('Database delete error:', dbError);
+                throw dbError;
+            }
 
+            console.log('File deleted successfully');
             return { success: true };
 
         } catch (error) {
