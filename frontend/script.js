@@ -106,6 +106,8 @@ class FileManager {
         // File input change
         fileInput.addEventListener('change', (e) => {
             this.handleFileSelect(Array.from(e.target.files));
+            // Reset file input to allow selecting the same file again
+            e.target.value = '';
         });
 
         // Browse button
@@ -281,6 +283,12 @@ class FileManager {
         this.updateUploadButton();
         document.getElementById('description').value = '';
         document.getElementById('tags').value = '';
+        
+        // Reset file input to ensure clean state
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.value = '';
+        }
 
         // Show results
         if (successCount > 0) {

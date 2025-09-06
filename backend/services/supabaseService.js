@@ -133,6 +133,13 @@ class SupabaseFileService {
                     .getPublicUrl(file.file_path);
 
                 return {
+                    // Frontend expected fields
+                    fileId: file.id,
+                    originalName: file.filename,
+                    uploadedAt: file.uploaded_at,
+                    size: file.file_size,
+                    
+                    // Keep all Supabase fields too
                     ...file,
                     public_url: publicUrl
                 };
@@ -235,17 +242,25 @@ class SupabaseFileService {
 
             console.log(`Found ${data.length} versions for ${baseName}`);
 
-            // Ensure public URLs are still valid/refreshed
+            // Map Supabase data to frontend expected format
             const versionsWithUrls = data.map((file, index) => {
                 const { data: { publicUrl } } = this.supabase.storage
                     .from(this.bucketName)
                     .getPublicUrl(file.file_path);
 
                 return {
+                    // Frontend expected fields
+                    fileId: file.id,
+                    originalName: file.filename,
+                    uploadedAt: file.uploaded_at,
+                    size: file.file_size,
+                    version: `${data.length - index}.0`,
+                    baseName: baseName,
+                    isLatest: index === 0,
+                    
+                    // Keep Supabase fields too
                     ...file,
-                    public_url: publicUrl,
-                    version: `${data.length - index}.0`, // Version numbering (newest = highest)
-                    baseName: baseName
+                    public_url: publicUrl
                 };
             });
 

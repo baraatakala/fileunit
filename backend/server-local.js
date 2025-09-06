@@ -214,23 +214,30 @@ app.get('/api/files/:baseName/versions', async (req, res) => {
 app.get('/api/download/:fileId', async (req, res) => {
     try {
         const { fileId } = req.params;
-        const fileDoc = fileDatabase.find(f => f.fileId === fileId);
         
-        if (!fileDoc) {
+        console.log('Getting download URL for file ID:', fileId);
+        
+        // Get file info from Supabase
+        const { data: fileData, error: fetchError } = await supabaseService.supabase
+            .from('files')
+            .select('*')
+            .eq('id', fileId);
+
+        if (fetchError || !fileData || fileData.length === 0) {
             return res.status(404).json({ error: 'File not found' });
         }
+
+        const file = fileData[0];
         
-        const filePath = fileDoc.filePath;
+        // Get signed download URL from Supabase
+        const downloadUrl = await supabaseService.getDownloadUrl(file.file_path);
         
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ error: 'File not found on disk' });
-        }
-        
-        res.download(filePath, fileDoc.originalName);
+        // Redirect to the signed URL
+        res.redirect(downloadUrl);
         
     } catch (error) {
         console.error('Download error:', error);
-        res.status(500).json({ error: 'Download failed' });
+        res.status(500).json({ error: 'Download failed', details: error.message });
     }
 });
 
