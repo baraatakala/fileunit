@@ -1,11 +1,18 @@
+require('dotenv').config({ path: '../../.env' });
 const { createClient } = require('@supabase/supabase-js');
 
 class SupabaseFileService {
     constructor() {
-        this.supabaseUrl = 'https://vdyuepooqnkwyxnjncva.supabase.co';
-        this.supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_l4_kY5NXkl4gwz_d7eb0gw_wrcUGo5D';
+        this.supabaseUrl = process.env.SUPABASE_URL || 'https://vdyuepooqnkwyxnjncva.supabase.co';
+        this.supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkeXVlcG9vcW5rd3l4bmpuY3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjY3NDQsImV4cCI6MjA3Mjc0Mjc0NH0.Vq71PYlP5x9KYYdPjCSmYUjp-5mCTaYhJAYdAeZXcNw';
         this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
-        this.bucketName = 'construction-files';
+        this.bucketName = process.env.STORAGE_BUCKET || 'construction-files';
+        
+        // Debug logging
+        console.log('🔧 SupabaseService initialized with:');
+        console.log('   URL:', this.supabaseUrl);
+        console.log('   Key:', this.supabaseKey ? 'SET' : 'NOT SET');
+        console.log('   Bucket:', this.bucketName);
     }
 
     // Upload file to Supabase Storage

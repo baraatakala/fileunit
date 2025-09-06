@@ -1,8 +1,14 @@
 // Test Supabase Integration
+require('dotenv').config({ path: '../.env' });
 const SupabaseFileService = require('./services/supabaseService');
 
 async function testSupabase() {
     console.log('🧪 Testing Supabase Integration...');
+    
+    // Debug: Check environment variables
+    console.log('🔧 Environment check:');
+    console.log('   SUPABASE_URL:', process.env.SUPABASE_URL || 'NOT SET');
+    console.log('   SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
     
     const service = new SupabaseFileService();
     
