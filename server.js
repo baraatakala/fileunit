@@ -129,7 +129,20 @@ const upload = multer({
 
 // Serve frontend
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+    console.log('Root route accessed');
+    console.log('Frontend path:', path.join(__dirname, 'frontend', 'index.html'));
+    
+    // Check if file exists
+    const frontendPath = path.join(__dirname, 'frontend', 'index.html');
+    if (fs.existsSync(frontendPath)) {
+        res.sendFile(frontendPath);
+    } else {
+        res.status(200).json({ 
+            message: 'File Tracking Platform API is running',
+            timestamp: new Date().toISOString(),
+            endpoints: ['/api/health', '/api/files', '/api/upload']
+        });
+    }
 });
 
 // Upload file
