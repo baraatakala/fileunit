@@ -16,6 +16,31 @@ const PORT = process.env.PORT || 3000;
 // Initialize Supabase service
 const supabaseService = new SupabaseFileService();
 
+// Test Supabase connectivity at startup
+async function testSupabaseConnectivity() {
+    try {
+        console.log('🔍 Testing Supabase connectivity...');
+        console.log('   URL:', process.env.SUPABASE_URL || 'NOT SET');
+        console.log('   Key:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+        
+        // Simple test query to verify connection
+        const { data, error } = await supabaseService.supabase
+            .from('files')
+            .select('count', { count: 'exact', head: true });
+            
+        if (error) {
+            console.error('❌ Supabase connection failed:', error.message);
+            return false;
+        }
+        
+        console.log('✅ Supabase connection successful');
+        return true;
+    } catch (error) {
+        console.error('❌ Supabase connectivity test failed:', error.message);
+        return false;
+    }
+}
+
 // Tell Express it's behind a proxy (for Render deployment)
 app.set('trust proxy', 1);
 
@@ -214,11 +239,22 @@ app.get('/api/download/:fileId', async (req, res) => {
         
         console.log('Getting download for file ID:', fileId);
         
-        // Get file info from Supabase
-        const { data: fileData, error: fetchError } = await supabaseService.supabase
-            .from('files')
-            .select('*')
-            .eq('id', fileId);
+        // Get file info from Supabase with better error handling
+        let fileData, fetchError;
+        try {
+            const response = await supabaseService.supabase
+                .from('files')
+                .select('*')
+                .eq('id', fileId);
+            fileData = response.data;
+            fetchError = response.error;
+        } catch (networkError) {
+            console.error('Network error connecting to Supabase:', networkError.message);
+            return res.status(503).json({ 
+                error: 'Service temporarily unavailable', 
+                details: 'Cannot connect to storage service'
+            });
+        }
 
         if (fetchError || !fileData || fileData.length === 0) {
             console.error('File not found for ID:', fileId, fetchError);
@@ -228,12 +264,23 @@ app.get('/api/download/:fileId', async (req, res) => {
         const file = fileData[0];
         console.log('Found file:', file.filename, 'at path:', file.file_path);
         
-        // Get signed URL for download (more secure than public URL)
-        const { data, error: urlError } = await supabaseService.supabase.storage
-            .from('construction-files')
-            .createSignedUrl(file.file_path, 3600); // 1 hour expiry
+        // Get signed URL for download with better error handling
+        let signedUrlData, urlError;
+        try {
+            const response = await supabaseService.supabase.storage
+                .from('construction-files')
+                .createSignedUrl(file.file_path, 3600); // 1 hour expiry
+            signedUrlData = response.data;
+            urlError = response.error;
+        } catch (networkError) {
+            console.error('Network error getting signed URL:', networkError.message);
+            return res.status(503).json({ 
+                error: 'Service temporarily unavailable', 
+                details: 'Cannot generate download link'
+            });
+        }
 
-        if (urlError || !data) {
+        if (urlError || !signedUrlData) {
             console.error('Error creating signed URL:', urlError);
             return res.status(500).json({ error: 'Failed to generate download URL' });
         }
@@ -245,7 +292,7 @@ app.get('/api/download/:fileId', async (req, res) => {
         res.setHeader('Content-Type', file.content_type || 'application/octet-stream');
         
         // Redirect to the signed URL
-        res.redirect(data.signedUrl);
+        res.redirect(signedUrlData.signedUrl);
         
     } catch (error) {
         console.error('Download error:', error);
@@ -318,12 +365,17 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`🚀 Construction File Sharing Platform`);
     console.log(`📂 Server running on port ${PORT}`);
     console.log(`🌐 Frontend available at http://localhost:${PORT}`);
     console.log(`💾 Storage: Supabase Cloud Storage`);
     console.log(`📁 Temp upload directory: ${uploadsDir}`);
+    
+    // Test Supabase connectivity after server starts
+    setTimeout(async () => {
+        await testSupabaseConnectivity();
+    }, 2000);
 });
 
 module.exports = app;
