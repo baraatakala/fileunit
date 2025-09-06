@@ -354,6 +354,58 @@ app.get('/api/env-check', (req, res) => {
     });
 });
 
+// Supabase connectivity test endpoint
+app.get('/api/supabase-test', async (req, res) => {
+    try {
+        console.log('Testing Supabase connectivity...');
+        
+        // Test 1: Database connection
+        const { data: files, error: dbError } = await supabaseService.supabase
+            .from('files')
+            .select('count', { count: 'exact', head: true });
+            
+        if (dbError) {
+            return res.status(500).json({
+                success: false,
+                error: 'Database connection failed',
+                details: dbError.message
+            });
+        }
+        
+        // Test 2: Storage bucket access
+        const { data: bucketFiles, error: storageError } = await supabaseService.supabase.storage
+            .from('construction-files')
+            .list('', { limit: 1 });
+            
+        if (storageError) {
+            return res.status(500).json({
+                success: false,
+                error: 'Storage access failed',
+                details: storageError.message
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'All Supabase connections working!',
+            tests: {
+                database: 'Connected',
+                storage: 'Connected',
+                fileCount: files?.count || 'Unknown',
+                storageFiles: bucketFiles?.length || 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('Supabase test failed:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Connection test failed',
+            details: error.message
+        });
+    }
+});
+
 // Render health check endpoint
 app.get('/healthz', (req, res) => {
     res.status(200).send('OK');
