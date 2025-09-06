@@ -2,7 +2,7 @@
 npm install
 
 # Start Command  
-npm start
+node server.js
 
 # Environment Variables needed:
 # NODE_ENV=production
