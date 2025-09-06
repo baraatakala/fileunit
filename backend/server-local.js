@@ -197,14 +197,16 @@ app.get('/api/files', async (req, res) => {
 app.get('/api/files/:baseName/versions', async (req, res) => {
     try {
         const { baseName } = req.params;
-        const versions = fileDatabase
-            .filter(f => f.baseName === decodeURIComponent(baseName))
-            .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+        const decodedBaseName = decodeURIComponent(baseName);
+        
+        console.log('Getting versions for:', decodedBaseName);
+        
+        const versions = await supabaseService.getFileVersions(decodedBaseName);
         
         res.json(versions);
     } catch (error) {
         console.error('Get versions error:', error);
-        res.status(500).json({ error: 'Failed to fetch file versions' });
+        res.status(500).json({ error: 'Failed to fetch file versions', details: error.message });
     }
 });
 

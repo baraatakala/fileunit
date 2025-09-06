@@ -101,8 +101,33 @@ class SupabaseFileService {
 
             console.log(`Found ${data.length} files in database`);
 
+            // Group files by filename to handle versions
+            const fileGroups = {};
+            data.forEach(file => {
+                const filename = file.filename;
+                if (!fileGroups[filename]) {
+                    fileGroups[filename] = [];
+                }
+                fileGroups[filename].push(file);
+            });
+
+            // Get only the latest version of each file for the main list
+            const latestFiles = Object.keys(fileGroups).map(filename => {
+                const versions = fileGroups[filename].sort((a, b) => 
+                    new Date(b.uploaded_at) - new Date(a.uploaded_at)
+                );
+                const latestFile = versions[0];
+                
+                // Add version info
+                latestFile.version = `${versions.length}.0`;
+                latestFile.baseName = filename;
+                latestFile.totalVersions = versions.length;
+                
+                return latestFile;
+            });
+
             // Ensure public URLs are still valid/refreshed
-            const filesWithUrls = data.map(file => {
+            const filesWithUrls = latestFiles.map(file => {
                 const { data: { publicUrl } } = this.supabase.storage
                     .from(this.bucketName)
                     .getPublicUrl(file.file_path);
@@ -188,6 +213,46 @@ class SupabaseFileService {
 
         } catch (error) {
             console.error('Get download URL error:', error);
+            throw error;
+        }
+    }
+
+    // Get file versions by base filename
+    async getFileVersions(baseName) {
+        try {
+            console.log('Fetching versions for:', baseName);
+
+            const { data, error } = await this.supabase
+                .from('files')
+                .select('*')
+                .eq('filename', baseName)
+                .order('uploaded_at', { ascending: false });
+
+            if (error) {
+                console.error('Database fetch versions error:', error);
+                throw error;
+            }
+
+            console.log(`Found ${data.length} versions for ${baseName}`);
+
+            // Ensure public URLs are still valid/refreshed
+            const versionsWithUrls = data.map((file, index) => {
+                const { data: { publicUrl } } = this.supabase.storage
+                    .from(this.bucketName)
+                    .getPublicUrl(file.file_path);
+
+                return {
+                    ...file,
+                    public_url: publicUrl,
+                    version: `${data.length - index}.0`, // Version numbering (newest = highest)
+                    baseName: baseName
+                };
+            });
+
+            return versionsWithUrls;
+
+        } catch (error) {
+            console.error('Get file versions service error:', error);
             throw error;
         }
     }
