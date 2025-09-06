@@ -310,23 +310,44 @@ class FileManager {
         try {
             const response = await fetch('/api/files');
             if (!response.ok) {
-                throw new Error('Failed to load files');
+                throw new Error(`HTTP ${response.status}: Failed to load files`);
             }
 
             const data = await response.json();
             console.log('Raw API response:', data); // Debug log
             
-            // Handle different response formats
+            // Handle different response formats with robust parsing
             let files = data;
-            if (data && data.files) {
+            
+            // Check for nested files property
+            if (data && typeof data === 'object' && data.files) {
                 files = data.files; // If API returns {files: [...]}
-            }
-            if (!Array.isArray(files)) {
-                console.log('Converting to array, received:', typeof files, files);
-                files = []; // Default to empty array
+                console.log('Found nested files property:', files);
             }
             
-            console.log('Final files array:', files); // Debug log
+            // Ensure we have a valid array or object to work with
+            if (files === null || files === undefined) {
+                console.warn('API returned null/undefined files, using empty array');
+                files = [];
+            } else if (typeof files === 'string') {
+                console.warn('API returned string instead of array/object, parsing...');
+                try {
+                    files = JSON.parse(files);
+                } catch (parseError) {
+                    console.error('Could not parse files string:', parseError);
+                    files = [];
+                }
+            } else if (typeof files !== 'object') {
+                console.warn('API returned unexpected type:', typeof files, 'using empty array');
+                files = [];
+            }
+            
+            console.log('Pre-render files data:', { 
+                type: typeof files, 
+                isArray: Array.isArray(files), 
+                data: files 
+            });
+            
             this.renderFiles(files);
         } catch (error) {
             console.error('Load files error:', error);
@@ -342,17 +363,42 @@ class FileManager {
     renderFiles(files, searchTerm = '') {
         const filesGrid = document.getElementById('filesGrid');
         
-        // Ensure files is an array
-        if (!Array.isArray(files)) {
-            console.error('Files is not an array:', files);
-            filesGrid.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Error loading files. Please refresh the page.</p>
-                </div>
-            `;
-            return;
+        // Debug logging for files parameter
+        console.log('renderFiles called with:', {
+            files: files,
+            type: typeof files,
+            isArray: Array.isArray(files),
+            searchTerm: searchTerm
+        });
+        
+        // Ensure files is always an array - multiple fallback strategies
+        if (!files) {
+            console.warn('Files is null/undefined, using empty array');
+            files = [];
+        } else if (!Array.isArray(files)) {
+            console.warn('Files is not an array, attempting conversion:', typeof files);
+            // Try to convert object to array (common with Firebase)
+            if (typeof files === 'object' && files !== null) {
+                if (files.length !== undefined) {
+                    // Array-like object
+                    files = Array.from(files);
+                } else {
+                    // Plain object - convert values to array
+                    files = Object.values(files);
+                }
+            } else {
+                // Fallback to empty array
+                files = [];
+            }
         }
+        
+        // Final safety check
+        if (!Array.isArray(files)) {
+            console.error('Could not convert files to array, using empty array. Original:', files);
+            files = [];
+        }
+        
+        console.log('Final files array for filtering:', files);
         
         // Filter files based on search term
         const filteredFiles = files.filter(file =>
