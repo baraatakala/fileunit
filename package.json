@@ -4,7 +4,7 @@
   "description": "A file-sharing platform for construction companies",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node backend/server-local.js",
     "build": "npm install",
     "dev": "nodemon server.js",
     "setup": "npm install"
