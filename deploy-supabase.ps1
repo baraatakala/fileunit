@@ -9,8 +9,8 @@ Set-Location "C:\Users\isc\VS_Code\project_2\project_2\file-sharing-platform"
 Write-Host "📂 Current directory: $(Get-Location)" -ForegroundColor Yellow
 
 # Check if Supabase is configured
-if (-not $env:SUPABASE_ANON_KEY) {
-    Write-Host "⚠️  WARNING: SUPABASE_ANON_KEY environment variable not set!" -ForegroundColor Red
+if (-not $env:SUPABASE_ANON_KEY -or $env:SUPABASE_ANON_KEY -eq "your-actual-key-here") {
+    Write-Host "⚠️ WARNING: SUPABASE_ANON_KEY environment variable not set!" -ForegroundColor Red
     Write-Host "   Please set up your Supabase environment variables before deployment." -ForegroundColor Red
     Write-Host "   See SUPABASE_SETUP.md for instructions." -ForegroundColor Red
 }
