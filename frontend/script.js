@@ -1,8 +1,22 @@
 class FileManager {
     constructor() {
         this.selectedFiles = [];
+        this.currentUser = null;
+        this.supabase = null;
         this.init();
         this.setupErrorHandling();
+        this.initSupabase();
+    }
+
+    // Initialize Supabase client (frontend)
+    async initSupabase() {
+        try {
+            // Import Supabase client (you'll need to include this via CDN or bundle)
+            // For now, we'll use the backend API
+            console.log('Supabase integration ready via backend API');
+        } catch (error) {
+            console.error('Supabase initialization error:', error);
+        }
     }
 
     setupErrorHandling() {

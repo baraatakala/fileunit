@@ -7,10 +7,14 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
 const mime = require('mime-types');
+const SupabaseFileService = require('./services/supabaseService');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Supabase service
+const supabaseService = new SupabaseFileService();
 
 // Tell Express it's behind a proxy (for Render deployment)
 app.set('trust proxy', 1);
@@ -145,77 +149,47 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        const file = req.file;
-        const fileId = uuidv4();
-        const timestamp = new Date().toISOString();
-        const fileName = file.originalname;
-        const fileExtension = path.extname(fileName);
-        const baseName = path.basename(fileName, fileExtension);
+        console.log('Starting Supabase file upload...');
         
-        // Create file metadata
-        const fileDoc = {
-            fileId: fileId,
-            originalName: fileName,
-            filePath: file.path,
-            filename: file.filename,
-            downloadURL: `/api/download/${fileId}`,
-            mimeType: file.mimetype,
-            size: file.size,
-            uploadedAt: timestamp,
-            version: 1,
-            isLatest: true,
-            baseName: baseName,
-            tags: req.body.tags ? req.body.tags.split(',').map(tag => tag.trim()) : [],
-            description: req.body.description || ''
-        };
-        
-        // Check if this is an update to existing file
-        const existingFiles = fileDatabase.filter(f => f.baseName === baseName && f.isLatest);
-        
-        if (existingFiles.length > 0) {
-            // Update version number
-            const maxVersion = Math.max(...fileDatabase.filter(f => f.baseName === baseName).map(f => f.version));
-            fileDoc.version = maxVersion + 1;
-            
-            // Mark other versions as not latest
-            fileDatabase.forEach(f => {
-                if (f.baseName === baseName) {
-                    f.isLatest = false;
-                }
-            });
-        }
-        
-        // Add to database
-        fileDatabase.push(fileDoc);
-        
+        const result = await supabaseService.uploadFile(
+            req.file, 
+            req.file.originalname,
+            req.body.userId || 'anonymous'
+        );
+
         res.json({
             success: true,
-            fileId: fileId,
-            downloadURL: fileDoc.downloadURL,
-            message: 'File uploaded successfully'
+            fileId: result.file.id,
+            downloadURL: result.publicUrl,
+            file: result.file,
+            message: 'File uploaded successfully to Supabase'
         });
         
     } catch (error) {
         console.error('Upload error:', error);
-        res.status(500).json({ error: 'Upload failed' });
+        res.status(500).json({ 
+            error: 'Upload failed', 
+            details: error.message 
+        });
     }
 });
 
 // Get all files
 app.get('/api/files', async (req, res) => {
     try {
-        // Ensure fileDatabase is always an array
-        if (!Array.isArray(fileDatabase)) {
-            console.error('fileDatabase is not an array:', fileDatabase);
-            fileDatabase = [];
-        }
+        console.log('Fetching files from Supabase...');
         
-        const latestFiles = fileDatabase.filter(f => f.isLatest);
-        console.log('Returning files:', latestFiles.length, 'files'); // Debug log
-        res.json(latestFiles);
+        const files = await supabaseService.getFiles();
+        
+        console.log('Returning files:', files.length, 'files');
+        res.json(files);
     } catch (error) {
         console.error('Get files error:', error);
-        res.status(500).json({ error: 'Failed to fetch files', files: [] });
+        res.status(500).json({ 
+            error: 'Failed to fetch files', 
+            files: [],
+            details: error.message 
+        });
     }
 });
 
