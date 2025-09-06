@@ -25,9 +25,6 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// In-memory storage for file metadata (in production, use a real database)
-let fileDatabase = [];
-
 // Middleware
 app.use(helmet({
     contentSecurityPolicy: {
@@ -275,13 +272,27 @@ app.delete('/api/files/:fileId', async (req, res) => {
 });
 
 // Health check endpoints
-app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
-        timestamp: new Date().toISOString(),
-        storage: 'Supabase',
-        files: fileDatabase.length
-    });
+app.get('/api/health', async (req, res) => {
+    try {
+        // Get actual file count from Supabase
+        const files = await supabaseService.getFiles();
+        
+        res.json({ 
+            status: 'OK', 
+            timestamp: new Date().toISOString(),
+            storage: 'Supabase',
+            files: files.length,
+            service: 'File Sharing Platform'
+        });
+    } catch (error) {
+        res.json({ 
+            status: 'OK', 
+            timestamp: new Date().toISOString(),
+            storage: 'Supabase',
+            files: 'Unable to fetch',
+            error: error.message
+        });
+    }
 });
 
 // Render health check endpoint
@@ -299,8 +310,8 @@ app.listen(PORT, () => {
     console.log(`🚀 Construction File Sharing Platform`);
     console.log(`📂 Server running on port ${PORT}`);
     console.log(`🌐 Frontend available at http://localhost:${PORT}`);
-    console.log(`💾 Storage: Local File System (uploads folder)`);
-    console.log(`📁 Upload directory: ${uploadsDir}`);
+    console.log(`💾 Storage: Supabase Cloud Storage`);
+    console.log(`📁 Temp upload directory: ${uploadsDir}`);
 });
 
 module.exports = app;
