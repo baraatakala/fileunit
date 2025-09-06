@@ -414,12 +414,22 @@ class FileManager {
         
         console.log('Final files array for filtering:', files);
         
-        // Filter files based on search term
-        const filteredFiles = files.filter(file =>
-            file.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (file.description && file.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (file.tags && file.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-        );
+        // Filter files based on search term - handle different property names
+        const filteredFiles = files.filter(file => {
+            if (!file || typeof file !== 'object') return false;
+            
+            // Get filename from various possible properties
+            const filename = file.originalName || file.filename || file.name || '';
+            const description = file.description || '';
+            const tags = file.tags || [];
+            
+            // Safely check if any field matches the search term
+            return filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   (Array.isArray(tags) && tags.some(tag => 
+                       typeof tag === 'string' && tag.toLowerCase().includes(searchTerm.toLowerCase())
+                   ));
+        });
 
         if (filteredFiles.length === 0) {
             filesGrid.innerHTML = `
@@ -431,18 +441,27 @@ class FileManager {
             return;
         }
 
-        filesGrid.innerHTML = filteredFiles.map(file => `
+        filesGrid.innerHTML = filteredFiles.map(file => {
+            // Handle different property names safely
+            const filename = file.originalName || file.filename || file.name || 'Unknown File';
+            const fileSize = file.size || file.file_size || 0;
+            const uploadDate = file.uploadedAt || file.uploaded_at || file.created_at || new Date().toISOString();
+            const version = file.version || '1.0';
+            const description = file.description || '';
+            const fileId = file.fileId || file.id || '';
+            
+            return `
             <div class="file-card">
                 <div class="file-header">
-                    <i class="file-card-icon ${this.getFileIcon(file.originalName)}"></i>
+                    <i class="file-card-icon ${this.getFileIcon(filename)}"></i>
                     <div class="file-card-info">
-                        <h3>${file.originalName}</h3>
+                        <h3>${filename}</h3>
                         <div class="file-meta">
-                            <div>Size: ${this.formatFileSize(file.size)}</div>
-                            <div>Uploaded: ${this.formatDate(file.uploadedAt)}</div>
-                            <div>Version: ${file.version}</div>
+                            <div>Size: ${this.formatFileSize(fileSize)}</div>
+                            <div>Uploaded: ${this.formatDate(uploadDate)}</div>
+                            <div>Version: ${version}</div>
                         </div>
-                        ${file.description ? `<div class="file-description">${file.description}</div>` : ''}
+                        ${description ? `<div class="file-description">${description}</div>` : ''}
                         ${file.tags && file.tags.length > 0 ? `
                             <div class="file-tags">
                                 ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
@@ -451,18 +470,19 @@ class FileManager {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <a href="/api/download/${file.fileId}" class="action-btn download-btn" target="_blank">
+                    <a href="/api/download/${fileId}" class="action-btn download-btn" target="_blank">
                         <i class="fas fa-download"></i> Download
                     </a>
-                    <button class="action-btn versions-btn" onclick="fileManager.showVersions('${file.baseName}')">
+                    <button class="action-btn versions-btn" onclick="fileManager.showVersions('${file.baseName || filename}')">
                         <i class="fas fa-history"></i> Versions
                     </button>
-                    <button class="action-btn delete-btn" onclick="fileManager.deleteFile('${file.fileId}', '${file.originalName}')">
+                    <button class="action-btn delete-btn" onclick="fileManager.deleteFile('${fileId}', '${filename}')">
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     async showVersions(baseName) {
@@ -552,6 +572,9 @@ class FileManager {
     }
 
     getFileIcon(filename) {
+        if (!filename || typeof filename !== 'string') {
+            return 'fas fa-file'; // Default icon
+        }
         const extension = filename.split('.').pop().toLowerCase();
         
         switch (extension) {
