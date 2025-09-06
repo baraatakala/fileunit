@@ -260,14 +260,19 @@ app.delete('/api/files/:fileId', async (req, res) => {
     }
 });
 
-// Health check
+// Health check endpoints
 app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        storage: 'Local File System',
+        storage: 'Supabase',
         files: fileDatabase.length
     });
+});
+
+// Render health check endpoint
+app.get('/healthz', (req, res) => {
+    res.status(200).send('OK');
 });
 
 // Error handling middleware
