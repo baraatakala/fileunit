@@ -287,12 +287,27 @@ app.get('/api/download/:fileId', async (req, res) => {
 
         console.log('Generated signed URL for download');
         
-        // Set proper headers for file download
-        res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
-        res.setHeader('Content-Type', file.content_type || 'application/octet-stream');
-        
-        // Redirect to the signed URL
-        res.redirect(signedUrlData.signedUrl);
+        // Instead of redirecting, fetch the file and stream it
+        const fetch = require('node-fetch');
+        try {
+            const fileResponse = await fetch(signedUrlData.signedUrl);
+            
+            if (!fileResponse.ok) {
+                throw new Error(`HTTP error! status: ${fileResponse.status}`);
+            }
+            
+            // Set proper headers for file download
+            res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+            res.setHeader('Content-Type', file.content_type || 'application/octet-stream');
+            res.setHeader('Content-Length', fileResponse.headers.get('content-length') || '0');
+            
+            // Stream the file content
+            fileResponse.body.pipe(res);
+            
+        } catch (streamError) {
+            console.error('Error streaming file:', streamError.message);
+            return res.status(500).json({ error: 'Failed to download file', details: streamError.message });
+        }
         
     } catch (error) {
         console.error('Download error:', error);
