@@ -1,0 +1,549 @@
+class FileManager {
+    constructor() {
+        this.selectedFiles = [];
+        this.init();
+        this.setupErrorHandling();
+    }
+
+    setupErrorHandling() {
+        // Handle extension-related errors gracefully
+        window.addEventListener('error', (event) => {
+            // Ignore extension-related errors
+            if (event.message && (
+                event.message.includes('message channel closed') ||
+                event.message.includes('Host validation failed') ||
+                event.message.includes('Host is not supported')
+            )) {
+                event.preventDefault();
+                return false;
+            }
+        });
+        
+        // Handle unhandled promise rejections from extensions
+        window.addEventListener('unhandledrejection', (event) => {
+            if (event.reason && event.reason.message && (
+                event.reason.message.includes('message channel closed') ||
+                event.reason.message.includes('Host validation failed') ||
+                event.reason.message.includes('Host is not supported')
+            )) {
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        // Override console methods to filter extension messages
+        const originalConsoleInfo = console.info;
+        const originalConsoleWarn = console.warn;
+        const originalConsoleLog = console.log;
+
+        console.info = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('Host validation failed') || 
+                message.includes('Host is not supported') ||
+                message.includes('Host is not valid') ||
+                message.includes('Host is not in insights whitelist') ||
+                message.includes('READ - Host validation')) {
+                return; // Suppress extension messages
+            }
+            originalConsoleInfo.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('Host validation failed') || 
+                message.includes('Host is not supported') ||
+                message.includes('Host is not valid') ||
+                message.includes('Host is not in insights whitelist')) {
+                return; // Suppress extension warnings
+            }
+            originalConsoleWarn.apply(console, args);
+        };
+
+        console.log = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('Host validation failed') || 
+                message.includes('Host is not supported') ||
+                message.includes('Host is not valid') ||
+                message.includes('Host is not in insights whitelist')) {
+                return; // Suppress extension logs
+            }
+            originalConsoleLog.apply(console, args);
+        };
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.loadFiles();
+    }
+
+    setupEventListeners() {
+        // File upload elements
+        const fileDropZone = document.getElementById('fileDropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        // File drop zone events
+        fileDropZone.addEventListener('click', () => fileInput.click());
+        fileDropZone.addEventListener('dragover', this.handleDragOver.bind(this));
+        fileDropZone.addEventListener('dragleave', this.handleDragLeave.bind(this));
+        fileDropZone.addEventListener('drop', this.handleDrop.bind(this));
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            this.handleFileSelect(Array.from(e.target.files));
+        });
+
+        // Browse button
+        browseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+
+        // Upload button
+        uploadBtn.addEventListener('click', this.uploadFiles.bind(this));
+
+        // Search and refresh
+        document.getElementById('searchInput').addEventListener('input', this.handleSearch.bind(this));
+        document.getElementById('refreshBtn').addEventListener('click', this.loadFiles.bind(this));
+
+        // Modals
+        document.getElementById('closeModal').addEventListener('click', this.closeModal.bind(this));
+        document.getElementById('closeVersionsModal').addEventListener('click', this.closeVersionsModal.bind(this));
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            const fileModal = document.getElementById('fileModal');
+            const versionsModal = document.getElementById('versionsModal');
+            if (e.target === fileModal) {
+                this.closeModal();
+            }
+            if (e.target === versionsModal) {
+                this.closeVersionsModal();
+            }
+        });
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        document.getElementById('fileDropZone').classList.add('drag-over');
+    }
+
+    handleDragLeave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        document.getElementById('fileDropZone').classList.remove('drag-over');
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        document.getElementById('fileDropZone').classList.remove('drag-over');
+        
+        const files = Array.from(e.dataTransfer.files);
+        this.handleFileSelect(files);
+    }
+
+    handleFileSelect(files) {
+        // Validate files
+        const validFiles = files.filter(file => this.validateFile(file));
+        
+        if (validFiles.length !== files.length) {
+            this.showNotification('Some files were rejected due to invalid format or size', 'warning');
+        }
+
+        // Add to selected files (avoid duplicates)
+        validFiles.forEach(file => {
+            const exists = this.selectedFiles.some(f => 
+                f.name === file.name && f.size === file.size
+            );
+            if (!exists) {
+                this.selectedFiles.push(file);
+            }
+        });
+
+        this.updateUploadQueue();
+        this.updateUploadButton();
+    }
+
+    validateFile(file) {
+        const maxSize = 500 * 1024 * 1024; // 500MB
+        const allowedExtensions = ['.pdf', '.dwg', '.dxf', '.jpg', '.jpeg', '.png', '.zip', '.doc', '.docx', '.txt'];
+        
+        // Check size
+        if (file.size > maxSize) {
+            this.showNotification(`File ${file.name} exceeds 500MB limit`, 'error');
+            return false;
+        }
+
+        // Check extension
+        const extension = '.' + file.name.split('.').pop().toLowerCase();
+        if (!allowedExtensions.includes(extension)) {
+            this.showNotification(`File type ${extension} not supported`, 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    updateUploadQueue() {
+        const uploadQueue = document.getElementById('uploadQueue');
+        uploadQueue.innerHTML = '';
+
+        this.selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            
+            fileItem.innerHTML = `
+                <div class="file-info">
+                    <i class="file-icon ${this.getFileIcon(file.name)}"></i>
+                    <div class="file-details">
+                        <h4>${file.name}</h4>
+                        <p>${this.formatFileSize(file.size)} • ${file.type || 'Unknown type'}</p>
+                    </div>
+                </div>
+                <button class="remove-file" onclick="fileManager.removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            uploadQueue.appendChild(fileItem);
+        });
+    }
+
+    removeFile(index) {
+        this.selectedFiles.splice(index, 1);
+        this.updateUploadQueue();
+        this.updateUploadButton();
+    }
+
+    updateUploadButton() {
+        const uploadBtn = document.getElementById('uploadBtn');
+        uploadBtn.disabled = this.selectedFiles.length === 0;
+    }
+
+    async uploadFiles() {
+        if (this.selectedFiles.length === 0) return;
+
+        const progressSection = document.getElementById('progressSection');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        // Show progress section
+        progressSection.style.display = 'block';
+        uploadBtn.disabled = true;
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (let i = 0; i < this.selectedFiles.length; i++) {
+            const file = this.selectedFiles[i];
+            const progress = ((i + 1) / this.selectedFiles.length) * 100;
+
+            progressFill.style.width = `${progress}%`;
+            progressText.textContent = `Uploading ${file.name}... (${i + 1}/${this.selectedFiles.length})`;
+
+            try {
+                await this.uploadSingleFile(file);
+                successCount++;
+            } catch (error) {
+                console.error('Upload failed:', error);
+                errorCount++;
+            }
+        }
+
+        // Hide progress section
+        setTimeout(() => {
+            progressSection.style.display = 'none';
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+        }, 2000);
+
+        // Reset form
+        this.selectedFiles = [];
+        this.updateUploadQueue();
+        this.updateUploadButton();
+        document.getElementById('description').value = '';
+        document.getElementById('tags').value = '';
+
+        // Show results
+        if (successCount > 0) {
+            this.showNotification(`${successCount} file(s) uploaded successfully`, 'success');
+            this.loadFiles(); // Refresh file list
+        }
+        if (errorCount > 0) {
+            this.showNotification(`${errorCount} file(s) failed to upload`, 'error');
+        }
+
+        uploadBtn.disabled = false;
+    }
+
+    async uploadSingleFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const description = document.getElementById('description').value;
+        const tags = document.getElementById('tags').value;
+        
+        if (description) formData.append('description', description);
+        if (tags) formData.append('tags', tags);
+
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Upload failed');
+        }
+
+        return await response.json();
+    }
+
+    async loadFiles() {
+        const filesGrid = document.getElementById('filesGrid');
+        filesGrid.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading files...</p></div>';
+
+        try {
+            const response = await fetch('/api/files');
+            if (!response.ok) {
+                throw new Error('Failed to load files');
+            }
+
+            const files = await response.json();
+            this.renderFiles(files);
+        } catch (error) {
+            console.error('Load files error:', error);
+            filesGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load files. Please try again.</p>
+                </div>
+            `;
+        }
+    }
+
+    renderFiles(files, searchTerm = '') {
+        const filesGrid = document.getElementById('filesGrid');
+        
+        // Filter files based on search term
+        const filteredFiles = files.filter(file =>
+            file.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (file.description && file.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (file.tags && file.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+        );
+
+        if (filteredFiles.length === 0) {
+            filesGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-folder-open"></i>
+                    <p>${searchTerm ? 'No files match your search.' : 'No files uploaded yet.'}</p>
+                </div>
+            `;
+            return;
+        }
+
+        filesGrid.innerHTML = filteredFiles.map(file => `
+            <div class="file-card">
+                <div class="file-header">
+                    <i class="file-card-icon ${this.getFileIcon(file.originalName)}"></i>
+                    <div class="file-card-info">
+                        <h3>${file.originalName}</h3>
+                        <div class="file-meta">
+                            <div>Size: ${this.formatFileSize(file.size)}</div>
+                            <div>Uploaded: ${this.formatDate(file.uploadedAt)}</div>
+                            <div>Version: ${file.version}</div>
+                        </div>
+                        ${file.description ? `<div class="file-description">${file.description}</div>` : ''}
+                        ${file.tags && file.tags.length > 0 ? `
+                            <div class="file-tags">
+                                ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <a href="/api/download/${file.fileId}" class="action-btn download-btn" target="_blank">
+                        <i class="fas fa-download"></i> Download
+                    </a>
+                    <button class="action-btn versions-btn" onclick="fileManager.showVersions('${file.baseName}')">
+                        <i class="fas fa-history"></i> Versions
+                    </button>
+                    <button class="action-btn delete-btn" onclick="fileManager.deleteFile('${file.fileId}', '${file.originalName}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async showVersions(baseName) {
+        const versionsModal = document.getElementById('versionsModal');
+        const versionsModalBody = document.getElementById('versionsModalBody');
+        
+        versionsModalBody.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading versions...</p></div>';
+        versionsModal.style.display = 'block';
+
+        try {
+            const response = await fetch(`/api/files/${encodeURIComponent(baseName)}/versions`);
+            if (!response.ok) {
+                throw new Error('Failed to load versions');
+            }
+
+            const versions = await response.json();
+            
+            versionsModalBody.innerHTML = versions.map(version => `
+                <div class="version-item">
+                    <div class="version-info">
+                        <h4>${version.originalName}</h4>
+                        <p>Uploaded: ${this.formatDate(version.uploadedAt)}</p>
+                        <p>Size: ${this.formatFileSize(version.size)}</p>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
+                        <a href="/api/download/${version.fileId}" class="action-btn download-btn" target="_blank">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Load versions error:', error);
+            versionsModalBody.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Failed to load versions. Please try again.</p>
+                </div>
+            `;
+        }
+    }
+
+    async deleteFile(fileId, fileName) {
+        if (!confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/files/${fileId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete file');
+            }
+
+            this.showNotification('File deleted successfully', 'success');
+            this.loadFiles(); // Refresh file list
+            
+        } catch (error) {
+            console.error('Delete error:', error);
+            this.showNotification('Failed to delete file', 'error');
+        }
+    }
+
+    handleSearch(e) {
+        const searchTerm = e.target.value;
+        // Re-render files with search filter
+        // For now, we'll reload files - in a real app you might want to cache them
+        this.loadFiles().then(() => {
+            // Get current files and filter them
+            fetch('/api/files')
+                .then(response => response.json())
+                .then(files => this.renderFiles(files, searchTerm))
+                .catch(console.error);
+        });
+    }
+
+    closeModal() {
+        document.getElementById('fileModal').style.display = 'none';
+    }
+
+    closeVersionsModal() {
+        document.getElementById('versionsModal').style.display = 'none';
+    }
+
+    getFileIcon(filename) {
+        const extension = filename.split('.').pop().toLowerCase();
+        
+        switch (extension) {
+            case 'pdf':
+                return 'fas fa-file-pdf';
+            case 'dwg':
+            case 'dxf':
+                return 'fas fa-drafting-compass';
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+                return 'fas fa-image';
+            case 'zip':
+            case 'rar':
+                return 'fas fa-file-archive';
+            case 'doc':
+            case 'docx':
+                return 'fas fa-file-word';
+            case 'txt':
+                return 'fas fa-file-alt';
+            default:
+                return 'fas fa-file';
+        }
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                z-index: 10000;
+                max-width: 300px;
+                word-wrap: break-word;
+            ">
+                ${message}
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+}
+
+// Initialize the file manager when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    window.fileManager = new FileManager();
+});
+
+// Make fileManager globally accessible for onclick handlers
+window.fileManager = null;

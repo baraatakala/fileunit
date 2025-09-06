@@ -1,0 +1,33 @@
+{
+  "name": "construction-file-sharing-backend",
+  "version": "1.0.0",
+  "description": "Backend for construction company file sharing platform",
+  "main": "server-local.js",
+  "scripts": {
+    "start": "node server-local.js",
+    "dev": "nodemon server-local.js",
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "firebase-admin": "^11.11.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "express-rate-limit": "^6.10.0",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.0",
+    "mime-types": "^2.1.35"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "file-sharing",
+    "construction",
+    "firebase",
+    "nodejs"
+  ],
+  "author": "Construction Company",
+  "license": "MIT"
+}

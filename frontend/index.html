@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construction File Sharing Platform</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-hard-hat"></i> Construction File Sharing</h1>
+            <p>Secure file sharing for construction projects</p>
+        </header>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2><i class="fas fa-upload"></i> Upload Files</h2>
+            <div class="upload-form">
+                <div class="file-drop-zone" id="fileDropZone">
+                    <div class="drop-zone-content">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop files here or <button class="browse-btn" id="browseBtn">Browse Files</button></p>
+                        <small>Supported: PDF, DWG, DXF, Images, ZIP (Max: 500MB)</small>
+                    </div>
+                    <input type="file" id="fileInput" multiple accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png,.zip,.doc,.docx,.txt" style="display: none;">
+                </div>
+                
+                <div class="upload-options">
+                    <div class="form-group">
+                        <label for="description">Description (Optional):</label>
+                        <textarea id="description" placeholder="Enter file description..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="tags">Tags (Optional):</label>
+                        <input type="text" id="tags" placeholder="e.g., blueprints, structural, electrical">
+                    </div>
+                </div>
+                
+                <div class="upload-queue" id="uploadQueue"></div>
+                
+                <button class="upload-btn" id="uploadBtn" disabled>
+                    <i class="fas fa-upload"></i> Upload Files
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <h3>Upload Progress</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+
+        <!-- Files Section -->
+        <div class="files-section">
+            <div class="section-header">
+                <h2><i class="fas fa-folder-open"></i> Files</h2>
+                <div class="controls">
+                    <input type="text" id="searchInput" placeholder="Search files..." class="search-input">
+                    <button class="refresh-btn" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+            </div>
+            
+            <div class="files-grid" id="filesGrid">
+                <!-- Files will be loaded here -->
+            </div>
+        </div>
+
+        <!-- File Details Modal -->
+        <div class="modal" id="fileModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">File Details</h3>
+                    <button class="close-btn" id="closeModal">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- File details will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Versions Modal -->
+        <div class="modal" id="versionsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>File Versions</h3>
+                    <button class="close-btn" id="closeVersionsModal">&times;</button>
+                </div>
+                <div class="modal-body" id="versionsModalBody">
+                    <!-- Versions will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2025 Construction File Sharing Platform. Built for construction professionals.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

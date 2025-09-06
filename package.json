@@ -1,0 +1,26 @@
+{
+  "name": "construction-file-sharing-platform",
+  "version": "1.0.0",
+  "description": "A file-sharing platform for construction companies",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev",
+    "setup": "cd backend && npm install",
+    "backend": "cd backend && npm start"
+  },
+  "keywords": [
+    "file-sharing",
+    "construction",
+    "firebase",
+    "nodejs",
+    "dwg",
+    "autocad",
+    "version-control"
+  ],
+  "author": "Construction Company",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

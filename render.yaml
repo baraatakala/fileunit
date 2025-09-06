@@ -1,0 +1,9 @@
+# Build Command
+npm install
+
+# Start Command  
+npm start
+
+# Environment Variables needed:
+# NODE_ENV=production
+# PORT=10000
