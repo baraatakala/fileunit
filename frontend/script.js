@@ -313,7 +313,17 @@ class FileManager {
                 throw new Error('Failed to load files');
             }
 
-            const files = await response.json();
+            const data = await response.json();
+            
+            // Handle different response formats
+            let files = data;
+            if (data && data.files) {
+                files = data.files; // If API returns {files: [...]}
+            }
+            if (!Array.isArray(files)) {
+                files = []; // Default to empty array
+            }
+            
             this.renderFiles(files);
         } catch (error) {
             console.error('Load files error:', error);
@@ -328,6 +338,18 @@ class FileManager {
 
     renderFiles(files, searchTerm = '') {
         const filesGrid = document.getElementById('filesGrid');
+        
+        // Ensure files is an array
+        if (!Array.isArray(files)) {
+            console.error('Files is not an array:', files);
+            filesGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error loading files. Please refresh the page.</p>
+                </div>
+            `;
+            return;
+        }
         
         // Filter files based on search term
         const filteredFiles = files.filter(file =>
