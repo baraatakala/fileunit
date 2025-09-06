@@ -236,27 +236,17 @@ app.get('/api/download/:fileId', async (req, res) => {
 app.delete('/api/files/:fileId', async (req, res) => {
     try {
         const { fileId } = req.params;
-        const fileIndex = fileDatabase.findIndex(f => f.fileId === fileId);
         
-        if (fileIndex === -1) {
-            return res.status(404).json({ error: 'File not found' });
-        }
+        console.log('Attempting to delete file with ID:', fileId);
         
-        const fileDoc = fileDatabase[fileIndex];
-        
-        // Delete physical file
-        if (fs.existsSync(fileDoc.filePath)) {
-            fs.unlinkSync(fileDoc.filePath);
-        }
-        
-        // Remove from database
-        fileDatabase.splice(fileIndex, 1);
+        // Use Supabase service to delete the file
+        const deleteResult = await supabaseService.deleteFile(fileId);
         
         res.json({ success: true, message: 'File deleted successfully' });
         
     } catch (error) {
         console.error('Delete error:', error);
-        res.status(500).json({ error: 'Delete failed' });
+        res.status(500).json({ error: 'Delete failed', details: error.message });
     }
 });
 
