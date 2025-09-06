@@ -295,6 +295,18 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
+// Environment check endpoint (for debugging)
+app.get('/api/env-check', (req, res) => {
+    res.json({
+        supabaseUrl: process.env.SUPABASE_URL || 'NOT SET',
+        supabaseKeyExists: process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET',
+        serviceKeyExists: process.env.SUPABASE_SERVICE_KEY ? 'SET' : 'NOT SET',
+        bucketName: process.env.STORAGE_BUCKET || 'NOT SET',
+        nodeEnv: process.env.NODE_ENV || 'NOT SET',
+        port: process.env.PORT || 'NOT SET'
+    });
+});
+
 // Render health check endpoint
 app.get('/healthz', (req, res) => {
     res.status(200).send('OK');
