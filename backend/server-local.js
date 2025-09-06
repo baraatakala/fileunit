@@ -406,6 +406,24 @@ app.get('/api/supabase-test', async (req, res) => {
     }
 });
 
+// S3 credentials test endpoint
+app.get('/api/s3-check', (req, res) => {
+    const s3Config = {
+        endpoint: process.env.S3_ENDPOINT || 'NOT SET',
+        accessKey: process.env.S3_ACCESS_KEY_ID ? 'SET (length: ' + process.env.S3_ACCESS_KEY_ID.length + ')' : 'NOT SET',
+        secretKey: process.env.S3_SECRET_ACCESS_KEY ? 'SET (length: ' + process.env.S3_SECRET_ACCESS_KEY.length + ')' : 'NOT SET',
+        region: process.env.S3_REGION || 'NOT SET',
+        bucket: process.env.STORAGE_BUCKET || 'NOT SET'
+    };
+    
+    res.json({
+        status: 'S3 Configuration Check',
+        config: s3Config,
+        timestamp: new Date().toISOString(),
+        note: 'S3 provides alternative access to Supabase Storage via AWS S3 protocol'
+    });
+});
+
 // Render health check endpoint
 app.get('/healthz', (req, res) => {
     res.status(200).send('OK');
