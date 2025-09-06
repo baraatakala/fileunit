@@ -314,6 +314,7 @@ class FileManager {
             }
 
             const data = await response.json();
+            console.log('Raw API response:', data); // Debug log
             
             // Handle different response formats
             let files = data;
@@ -321,9 +322,11 @@ class FileManager {
                 files = data.files; // If API returns {files: [...]}
             }
             if (!Array.isArray(files)) {
+                console.log('Converting to array, received:', typeof files, files);
                 files = []; // Default to empty array
             }
             
+            console.log('Final files array:', files); // Debug log
             this.renderFiles(files);
         } catch (error) {
             console.error('Load files error:', error);

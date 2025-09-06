@@ -204,11 +204,18 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 // Get all files
 app.get('/api/files', async (req, res) => {
     try {
+        // Ensure fileDatabase is always an array
+        if (!Array.isArray(fileDatabase)) {
+            console.error('fileDatabase is not an array:', fileDatabase);
+            fileDatabase = [];
+        }
+        
         const latestFiles = fileDatabase.filter(f => f.isLatest);
+        console.log('Returning files:', latestFiles.length, 'files'); // Debug log
         res.json(latestFiles);
     } catch (error) {
         console.error('Get files error:', error);
-        res.status(500).json({ error: 'Failed to fetch files' });
+        res.status(500).json({ error: 'Failed to fetch files', files: [] });
     }
 });
 
