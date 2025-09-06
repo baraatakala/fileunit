@@ -215,7 +215,7 @@ app.get('/api/download/:fileId', async (req, res) => {
     try {
         const { fileId } = req.params;
         
-        console.log('Getting download URL for file ID:', fileId);
+        console.log('Getting download for file ID:', fileId);
         
         // Get file info from Supabase
         const { data: fileData, error: fetchError } = await supabaseService.supabase
@@ -224,16 +224,31 @@ app.get('/api/download/:fileId', async (req, res) => {
             .eq('id', fileId);
 
         if (fetchError || !fileData || fileData.length === 0) {
+            console.error('File not found for ID:', fileId, fetchError);
             return res.status(404).json({ error: 'File not found' });
         }
 
         const file = fileData[0];
+        console.log('Found file:', file.filename, 'at path:', file.file_path);
         
-        // Get signed download URL from Supabase
-        const downloadUrl = await supabaseService.getDownloadUrl(file.file_path);
+        // Get signed URL for download (more secure than public URL)
+        const { data, error: urlError } = await supabaseService.supabase.storage
+            .from('construction-files')
+            .createSignedUrl(file.file_path, 3600); // 1 hour expiry
+
+        if (urlError || !data) {
+            console.error('Error creating signed URL:', urlError);
+            return res.status(500).json({ error: 'Failed to generate download URL' });
+        }
+
+        console.log('Generated signed URL for download');
+        
+        // Set proper headers for file download
+        res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+        res.setHeader('Content-Type', file.content_type || 'application/octet-stream');
         
         // Redirect to the signed URL
-        res.redirect(downloadUrl);
+        res.redirect(data.signedUrl);
         
     } catch (error) {
         console.error('Download error:', error);
