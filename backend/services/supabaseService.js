@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 class SupabaseFileService {
     constructor() {
         this.supabaseUrl = 'https://vdyuepooqnkwyxnjncva.supabase.co';
-        this.supabaseKey = process.env.SUPABASE_ANON_KEY || 'your-anon-key-here';
+        this.supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_l4_kY5NXkl4gwz_d7eb0gw_wrcUGo5D';
         this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
         this.bucketName = 'construction-files';
     }
