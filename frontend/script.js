@@ -87,6 +87,8 @@ class FileManager {
 
     init() {
         this.setupEventListeners();
+        this.initTheme();
+        this.initView();
         this.loadFiles();
     }
 
@@ -122,6 +124,13 @@ class FileManager {
         // Search and refresh
         document.getElementById('searchInput').addEventListener('input', this.handleSearch.bind(this));
         document.getElementById('refreshBtn').addEventListener('click', this.loadFiles.bind(this));
+
+        // Theme toggle
+        document.getElementById('themeToggle').addEventListener('click', this.toggleTheme.bind(this));
+
+        // View controls
+        document.getElementById('gridViewBtn').addEventListener('click', () => this.switchView('grid'));
+        document.getElementById('listViewBtn').addEventListener('click', () => this.switchView('list'));
 
         // Character counters for description and tags
         const descriptionTextarea = document.getElementById('description');
@@ -912,6 +921,66 @@ class FileManager {
                 notification.parentNode.removeChild(notification);
             }
         }, 5000);
+    }
+
+    // Theme toggle functionality
+    toggleTheme() {
+        const body = document.body;
+        const themeToggle = document.getElementById('themeToggle');
+        const icon = themeToggle.querySelector('i');
+        
+        body.classList.toggle('dark-theme');
+        
+        if (body.classList.contains('dark-theme')) {
+            icon.className = 'fas fa-sun';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            icon.className = 'fas fa-moon';
+            localStorage.setItem('theme', 'light');
+        }
+    }
+
+    // Initialize theme from localStorage
+    initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        const body = document.body;
+        const themeToggle = document.getElementById('themeToggle');
+        const icon = themeToggle.querySelector('i');
+        
+        if (savedTheme === 'dark') {
+            body.classList.add('dark-theme');
+            icon.className = 'fas fa-sun';
+        } else {
+            body.classList.remove('dark-theme');
+            icon.className = 'fas fa-moon';
+        }
+    }
+
+    // View switching functionality
+    switchView(viewType) {
+        const filesGrid = document.getElementById('filesGrid');
+        const gridBtn = document.getElementById('gridViewBtn');
+        const listBtn = document.getElementById('listViewBtn');
+        
+        if (viewType === 'list') {
+            filesGrid.classList.add('list-view');
+            filesGrid.classList.remove('grid-view');
+            gridBtn.classList.remove('active');
+            listBtn.classList.add('active');
+            localStorage.setItem('viewType', 'list');
+        } else {
+            filesGrid.classList.add('grid-view');
+            filesGrid.classList.remove('list-view');
+            listBtn.classList.remove('active');
+            gridBtn.classList.add('active');
+            localStorage.setItem('viewType', 'grid');
+        }
+    }
+
+    // Initialize view from localStorage
+    initView() {
+        const savedView = localStorage.getItem('viewType') || 'grid';
+        this.switchView(savedView);
     }
 }
 
