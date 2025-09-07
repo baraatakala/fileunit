@@ -514,6 +514,8 @@ class FileManager {
                         <h4>${version.originalName}</h4>
                         <p>Uploaded: ${this.formatDate(version.uploadedAt)}</p>
                         <p>Size: ${this.formatFileSize(version.size)}</p>
+                        ${version.description ? `<p><strong>Description:</strong> ${version.description}</p>` : ''}
+                        ${version.tags ? `<p><strong>Tags:</strong> ${version.tags}</p>` : ''}
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
