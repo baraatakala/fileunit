@@ -535,6 +535,28 @@ class FileManager {
         }
     }
 
+    async downloadFile(fileId, filename) {
+        try {
+            // Create a download link and trigger it
+            const downloadUrl = `/api/download/${fileId}`;
+            
+            // Create a temporary link element
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename || 'download';
+            link.style.display = 'none';
+            
+            // Add to DOM, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+        } catch (error) {
+            console.error('Download error:', error);
+            this.showMessage('Failed to download file: ' + error.message, 'error');
+        }
+    }
+
     async deleteFile(fileId, fileName) {
         if (!confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
             return;
