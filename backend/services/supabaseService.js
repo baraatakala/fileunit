@@ -18,7 +18,7 @@ class SupabaseFileService {
     }
 
     // Upload file to Supabase Storage
-    async uploadFile(file, fileName, userId) {
+    async uploadFile(file, fileName, userId, description = '', tags = '') {
         try {
             const fileExtension = fileName.split('.').pop();
             const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
@@ -55,7 +55,9 @@ class SupabaseFileService {
                 public_url: publicUrl,
                 uploaded_by: userId || 'anonymous',
                 uploaded_at: new Date().toISOString(),
-                unique_filename: uniqueFileName
+                unique_filename: uniqueFileName,
+                description: description || null,
+                tags: tags ? (typeof tags === 'string' ? [tags] : tags) : null
             };
 
             const { data: dbData, error: dbError } = await this.supabase

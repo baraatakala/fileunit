@@ -159,11 +159,15 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         }
 
         console.log('Starting Supabase file upload...');
+        console.log('Description:', req.body.description);
+        console.log('Tags:', req.body.tags);
         
         const result = await supabaseService.uploadFile(
             req.file, 
             req.file.originalname,
-            req.body.userId || 'anonymous'
+            req.body.userId || 'anonymous',
+            req.body.description || '',
+            req.body.tags || ''
         );
 
         res.json({
