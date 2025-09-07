@@ -688,53 +688,23 @@ class FileManager {
 
             const versions = await response.json();
             
-            versionsModalBody.innerHTML = versions.map(version => {
-                // Debug log to see what data we have
-                console.log('Version data:', version);
-                
-                // Handle tags properly - they might be an array
-                let tagsDisplay = '';
-                if (version.tags && version.tags.length > 0) {
-                    const tagsArray = Array.isArray(version.tags) ? version.tags : [version.tags];
-                    const tagsText = tagsArray.filter(tag => tag && tag.trim());
-                    if (tagsText.length > 0) {
-                        tagsDisplay = `
-                            <div class="version-tags">
-                                <strong>Tags:</strong>
-                                ${tagsText.map(tag => `<span class="version-tag">${tag.trim()}</span>`).join('')}
-                            </div>
-                        `;
-                    }
-                }
-                
-                // Handle description
-                let descriptionDisplay = '';
-                if (version.description && version.description.trim()) {
-                    descriptionDisplay = `
-                        <div class="version-description">
-                            <strong>Description:</strong> ${version.description.trim()}
-                        </div>
-                    `;
-                }
-                
-                return `
-                    <div class="version-item">
-                        <div class="version-info">
-                            <h4>${version.originalName}</h4>
-                            <p><i class="fas fa-calendar"></i> Uploaded: ${this.formatDate(version.uploadedAt)}</p>
-                            <p><i class="fas fa-hdd"></i> Size: ${this.formatFileSize(version.size)}</p>
-                            ${descriptionDisplay}
-                            ${tagsDisplay}
-                        </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
-                            <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')">
-                                <i class="fas fa-download"></i>
-                            </button>
-                        </div>
+            versionsModalBody.innerHTML = versions.map(version => `
+                <div class="version-item">
+                    <div class="version-info">
+                        <h4>${version.originalName}</h4>
+                        <p><i class="fas fa-calendar"></i> Uploaded: ${this.formatDate(version.uploadedAt)}</p>
+                        <p><i class="fas fa-hdd"></i> Size: ${this.formatFileSize(version.size)}</p>
+                        ${version.description ? `<p><strong>Description:</strong> ${version.description}</p>` : ''}
+                        ${version.tags ? `<p><strong>Tags:</strong> ${Array.isArray(version.tags) ? version.tags.join(', ') : version.tags}</p>` : ''}
                     </div>
-                `;
-            }).join('');
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
+                        <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
             
         } catch (error) {
             console.error('Load versions error:', error);
