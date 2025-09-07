@@ -123,6 +123,40 @@ class FileManager {
         document.getElementById('searchInput').addEventListener('input', this.handleSearch.bind(this));
         document.getElementById('refreshBtn').addEventListener('click', this.loadFiles.bind(this));
 
+        // Character counters for description and tags
+        const descriptionTextarea = document.getElementById('description');
+        const tagsInput = document.getElementById('tags');
+        const descriptionCount = document.getElementById('descriptionCount');
+        const tagsCount = document.getElementById('tagsCount');
+
+        if (descriptionTextarea && descriptionCount) {
+            descriptionTextarea.addEventListener('input', (e) => {
+                const length = e.target.value.length;
+                descriptionCount.textContent = `${length}/500`;
+                if (length > 450) {
+                    descriptionCount.style.color = '#e74c3c';
+                } else if (length > 400) {
+                    descriptionCount.style.color = '#f39c12';
+                } else {
+                    descriptionCount.style.color = '#7f8c8d';
+                }
+            });
+        }
+
+        if (tagsInput && tagsCount) {
+            tagsInput.addEventListener('input', (e) => {
+                const length = e.target.value.length;
+                tagsCount.textContent = `${length}/100`;
+                if (length > 90) {
+                    tagsCount.style.color = '#e74c3c';
+                } else if (length > 80) {
+                    tagsCount.style.color = '#f39c12';
+                } else {
+                    tagsCount.style.color = '#7f8c8d';
+                }
+            });
+        }
+
         // Modals
         document.getElementById('closeModal').addEventListener('click', this.closeModal.bind(this));
         document.getElementById('closeVersionsModal').addEventListener('click', this.closeVersionsModal.bind(this));
@@ -654,23 +688,53 @@ class FileManager {
 
             const versions = await response.json();
             
-            versionsModalBody.innerHTML = versions.map(version => `
-                <div class="version-item">
-                    <div class="version-info">
-                        <h4>${version.originalName}</h4>
-                        <p>Uploaded: ${this.formatDate(version.uploadedAt)}</p>
-                        <p>Size: ${this.formatFileSize(version.size)}</p>
-                        ${version.description ? `<p><strong>Description:</strong> ${version.description}</p>` : ''}
-                        ${version.tags ? `<p><strong>Tags:</strong> ${version.tags}</p>` : ''}
+            versionsModalBody.innerHTML = versions.map(version => {
+                // Debug log to see what data we have
+                console.log('Version data:', version);
+                
+                // Handle tags properly - they might be an array
+                let tagsDisplay = '';
+                if (version.tags && version.tags.length > 0) {
+                    const tagsArray = Array.isArray(version.tags) ? version.tags : [version.tags];
+                    const tagsText = tagsArray.filter(tag => tag && tag.trim());
+                    if (tagsText.length > 0) {
+                        tagsDisplay = `
+                            <div class="version-tags">
+                                <strong>Tags:</strong>
+                                ${tagsText.map(tag => `<span class="version-tag">${tag.trim()}</span>`).join('')}
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Handle description
+                let descriptionDisplay = '';
+                if (version.description && version.description.trim()) {
+                    descriptionDisplay = `
+                        <div class="version-description">
+                            <strong>Description:</strong> ${version.description.trim()}
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="version-item">
+                        <div class="version-info">
+                            <h4>${version.originalName}</h4>
+                            <p><i class="fas fa-calendar"></i> Uploaded: ${this.formatDate(version.uploadedAt)}</p>
+                            <p><i class="fas fa-hdd"></i> Size: ${this.formatFileSize(version.size)}</p>
+                            ${descriptionDisplay}
+                            ${tagsDisplay}
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
+                            <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
-                        <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')">
-                            <i class="fas fa-download"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
         } catch (error) {
             console.error('Load versions error:', error);

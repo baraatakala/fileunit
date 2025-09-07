@@ -923,6 +923,40 @@ body {
     text-align: center;
 }
 
+.version-info p strong {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.version-info .version-description {
+    background: rgba(52, 152, 219, 0.05);
+    padding: 10px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #3498db;
+    margin: 8px 0;
+    font-style: italic;
+    color: #34495e;
+}
+
+.version-info .version-tags {
+    margin: 8px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.version-info .version-tags .version-tag {
+    background: linear-gradient(135deg, #e8f4fd, #d4edda);
+    color: #2c3e50;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
 .version-badge {
     background: linear-gradient(135deg, #3498db, #2980b9);
     color: white;
