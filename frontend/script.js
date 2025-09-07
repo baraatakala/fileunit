@@ -478,9 +478,9 @@ class FileManager {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <a href="/api/download/${fileId}" class="action-btn download-btn" target="_blank">
+                    <button class="action-btn download-btn" onclick="fileManager.downloadFile('${fileId}', '${filename}')">
                         <i class="fas fa-download"></i> Download
-                    </a>
+                    </button>
                     <button class="action-btn versions-btn" onclick="fileManager.showVersions('${file.baseName || filename}')">
                         <i class="fas fa-history"></i> Versions
                     </button>
@@ -517,9 +517,9 @@ class FileManager {
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
-                        <a href="/api/download/${version.fileId}" class="action-btn download-btn" target="_blank">
+                        <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')">
                             <i class="fas fa-download"></i>
-                        </a>
+                        </button>
                     </div>
                 </div>
             `).join('');

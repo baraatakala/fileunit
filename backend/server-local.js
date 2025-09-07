@@ -109,22 +109,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadsDir);
-    },
-    filename: function (req, file, cb) {
-        const fileId = uuidv4();
-        const timestamp = Date.now();
-        const extension = path.extname(file.originalname);
-        const filename = `${fileId}_${timestamp}${extension}`;
-        cb(null, filename);
-    }
-});
-
+// Configure multer for file uploads - use memory storage for binary files
 const upload = multer({
-    storage: storage,
+    storage: multer.memoryStorage(), // Use memory storage to preserve buffer for binary files
     limits: {
         fileSize: 500 * 1024 * 1024 // 500MB limit
     },
@@ -287,7 +274,7 @@ app.get('/api/download/:fileId', async (req, res) => {
 
         console.log('Generated signed URL for download');
         
-        // Instead of redirecting, fetch the file and stream it
+        // Instead of redirecting, fetch the file and stream it properly for binary files
         const fetch = require('node-fetch');
         try {
             const fileResponse = await fetch(signedUrlData.signedUrl);
@@ -300,9 +287,13 @@ app.get('/api/download/:fileId', async (req, res) => {
             res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
             res.setHeader('Content-Type', file.content_type || 'application/octet-stream');
             res.setHeader('Content-Length', fileResponse.headers.get('content-length') || '0');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
             
-            // Stream the file content
-            fileResponse.body.pipe(res);
+            // For binary files, we need to handle the buffer properly
+            const buffer = await fileResponse.buffer();
+            res.end(buffer);
             
         } catch (streamError) {
             console.error('Error streaming file:', streamError.message);
