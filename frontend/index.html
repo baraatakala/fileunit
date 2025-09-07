@@ -8,8 +8,14 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Secure file sharing platform for construction projects - Upload and manage DWG, PDF, and project files">
 </head>
 <body>
+    <div class="theme-toggle" id="themeToggle">
+        <i class="fas fa-moon"></i>
+    </div>
+    
     <div class="container">
         <header class="header">
             <h1><i class="fas fa-hard-hat"></i> Construction File Sharing</h1>
@@ -30,6 +36,12 @@
                         <i class="fas fa-cloud-upload-alt"></i>
                         <p>Drag & drop files here or <button class="browse-btn" id="browseBtn">Browse Files</button></p>
                         <small>Supported: PDF, DWG, DXF, Images, ZIP (Max: 500MB)</small>
+                        <div class="file-types-preview">
+                            <span class="file-type-icon"><i class="fas fa-file-pdf"></i> PDF</span>
+                            <span class="file-type-icon"><i class="fas fa-drafting-compass"></i> DWG</span>
+                            <span class="file-type-icon"><i class="fas fa-image"></i> Images</span>
+                            <span class="file-type-icon"><i class="fas fa-file-archive"></i> ZIP</span>
+                        </div>
                     </div>
                     <input type="file" id="fileInput" multiple accept=".pdf,.dwg,.dxf,.jpg,.jpeg,.png,.zip,.doc,.docx,.txt" style="display: none;">
                 </div>
@@ -37,11 +49,13 @@
                 <div class="upload-options">
                     <div class="form-group">
                         <label for="description">Description (Optional):</label>
-                        <textarea id="description" placeholder="Enter file description..."></textarea>
+                        <textarea id="description" placeholder="Enter file description..." maxlength="500"></textarea>
+                        <small class="char-count" id="descriptionCount">0/500</small>
                     </div>
                     <div class="form-group">
                         <label for="tags">Tags (Optional):</label>
-                        <input type="text" id="tags" placeholder="e.g., blueprints, structural, electrical">
+                        <input type="text" id="tags" placeholder="e.g., blueprints, structural, electrical" maxlength="100">
+                        <small class="char-count" id="tagsCount">0/100</small>
                     </div>
                 </div>
                 
@@ -67,13 +81,42 @@
             <div class="section-header">
                 <h2><i class="fas fa-folder-open"></i> Files</h2>
                 <div class="controls">
-                    <input type="text" id="searchInput" placeholder="Search files..." class="search-input">
-                    <button class="refresh-btn" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="Search files..." class="search-input">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <div class="view-controls">
+                        <button class="view-btn active" id="gridViewBtn" title="Grid View">
+                            <i class="fas fa-th"></i>
+                        </button>
+                        <button class="view-btn" id="listViewBtn" title="List View">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                    <button class="refresh-btn" id="refreshBtn" title="Refresh Files">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
                 </div>
             </div>
             
-            <div class="files-grid" id="filesGrid">
-                <!-- Files will be loaded here -->
+            <div class="files-container">
+                <div class="files-stats" id="filesStats">
+                    <span class="stat-item">
+                        <i class="fas fa-file"></i>
+                        <span id="totalFiles">0</span> files
+                    </span>
+                    <span class="stat-item">
+                        <i class="fas fa-hdd"></i>
+                        <span id="totalSize">0 B</span> total
+                    </span>
+                </div>
+                
+                <div class="files-grid" id="filesGrid">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading files...</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -101,6 +144,15 @@
                     <!-- Versions will be loaded here -->
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Drag Preview Overlay -->
+    <div class="drag-preview" id="dragPreview">
+        <div class="drag-preview-content">
+            <i class="fas fa-upload"></i>
+            <p>Drop files to upload</p>
+            <div class="drag-preview-counter" id="dragPreviewCounter"></div>
         </div>
     </div>
 

@@ -143,22 +143,139 @@ class FileManager {
     handleDragOver(e) {
         e.preventDefault();
         e.stopPropagation();
-        document.getElementById('fileDropZone').classList.add('drag-over');
+        const dropZone = document.getElementById('fileDropZone');
+        dropZone.classList.add('drag-over');
+        
+        // Show preview of what will be uploaded
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const validCount = Array.from(files).filter(file => this.validateFile(file)).length;
+            const invalidCount = files.length - validCount;
+            
+            let message = `Drop to upload ${validCount} file${validCount !== 1 ? 's' : ''}`;
+            if (invalidCount > 0) {
+                message += ` (${invalidCount} invalid)`;
+            }
+            
+            const preview = dropZone.querySelector('.drag-preview') || document.createElement('div');
+            preview.className = 'drag-preview';
+            preview.innerHTML = `
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>${message}</p>
+            `;
+            
+            if (!dropZone.querySelector('.drag-preview')) {
+                dropZone.appendChild(preview);
+            }
+        }
     }
 
     handleDragLeave(e) {
         e.preventDefault();
         e.stopPropagation();
-        document.getElementById('fileDropZone').classList.remove('drag-over');
+        
+        // Only remove drag state if really leaving the drop zone
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            const dropZone = document.getElementById('fileDropZone');
+            dropZone.classList.remove('drag-over');
+            
+            // Remove preview
+            const preview = dropZone.querySelector('.drag-preview');
+            if (preview) {
+                preview.remove();
+            }
+        }
     }
 
     handleDrop(e) {
         e.preventDefault();
         e.stopPropagation();
-        document.getElementById('fileDropZone').classList.remove('drag-over');
+        const dropZone = document.getElementById('fileDropZone');
+        dropZone.classList.remove('drag-over');
+        
+        // Remove preview
+        const preview = dropZone.querySelector('.drag-preview');
+        if (preview) {
+            preview.remove();
+        }
         
         const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) {
+            this.showNotification('No files detected', 'error');
+            return;
+        }
+        
         this.handleFileSelect(files);
+    }
+
+    // Enhanced file validation
+    validateFile(file) {
+        const maxSize = 500 * 1024 * 1024; // 500MB
+        const allowedTypes = [
+            // Documents
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            
+            // Images
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            
+            // CAD Files
+            'application/acad',
+            'application/x-autocad',
+            'image/vnd.dwg',
+            'image/x-dwg',
+            'application/dwg',
+            'application/x-dwg',
+            'drawing/dwg',
+            'image/vnd.dxf',
+            'application/dxf',
+            
+            // Archives
+            'application/zip',
+            'application/x-rar-compressed',
+            'application/x-7z-compressed',
+            
+            // Spreadsheets
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            
+            // Presentations
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        ];
+
+        // Check file size
+        if (file.size > maxSize) {
+            this.showNotification(`File "${file.name}" is too large. Maximum size is 500MB.`, 'error');
+            return false;
+        }
+
+        // Check file type (also check extension for CAD files)
+        const fileName = file.name.toLowerCase();
+        const hasValidExtension = fileName.endsWith('.pdf') || fileName.endsWith('.dwg') || 
+                                fileName.endsWith('.dxf') || fileName.endsWith('.jpg') || 
+                                fileName.endsWith('.jpeg') || fileName.endsWith('.png') || 
+                                fileName.endsWith('.zip') || fileName.endsWith('.doc') || 
+                                fileName.endsWith('.docx') || fileName.endsWith('.txt') ||
+                                fileName.endsWith('.gif') || fileName.endsWith('.webp') ||
+                                fileName.endsWith('.rar') || fileName.endsWith('.7z') ||
+                                fileName.endsWith('.xls') || fileName.endsWith('.xlsx') ||
+                                fileName.endsWith('.ppt') || fileName.endsWith('.pptx');
+
+        const hasValidMimeType = allowedTypes.includes(file.type);
+
+        if (!hasValidExtension && !hasValidMimeType) {
+            this.showNotification(`File "${file.name}" has an unsupported format.`, 'error');
+            return false;
+        }
+
+        return true;
     }
 
     handleFileSelect(files) {
@@ -458,34 +575,63 @@ class FileManager {
             const description = file.description || '';
             const fileId = file.fileId || file.id || '';
             
+            // Handle tags - they might be stored as JSON string
+            let tags = file.tags || [];
+            if (typeof tags === 'string') {
+                try {
+                    tags = JSON.parse(tags);
+                } catch (e) {
+                    // If not JSON, treat as comma-separated string
+                    tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                }
+            }
+            if (!Array.isArray(tags)) {
+                tags = [];
+            }
+            
             return `
-            <div class="file-card">
+            <div class="file-card" data-file-id="${fileId}">
                 <div class="file-header">
                     <i class="file-card-icon ${this.getFileIcon(filename)}"></i>
                     <div class="file-card-info">
-                        <h3>${filename}</h3>
+                        <h3 class="file-name" title="${filename}">${filename}</h3>
                         <div class="file-meta">
-                            <div>Size: ${this.formatFileSize(fileSize)}</div>
-                            <div>Uploaded: ${this.formatDate(uploadDate)}</div>
-                            <div>Version: ${version}</div>
+                            <div class="meta-item">
+                                <i class="fas fa-weight-hanging"></i>
+                                <span>${this.formatFileSize(fileSize)}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>${this.formatDate(uploadDate)}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-code-branch"></i>
+                                <span>v${version}</span>
+                            </div>
                         </div>
-                        ${description ? `<div class="file-description">${description}</div>` : ''}
-                        ${file.tags && file.tags.length > 0 ? `
+                        ${description ? `<div class="file-description">
+                            <i class="fas fa-align-left"></i>
+                            <span>${description}</span>
+                        </div>` : ''}
+                        ${tags.length > 0 ? `
                             <div class="file-tags">
-                                ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                <i class="fas fa-tags"></i>
+                                <div class="tags-container">
+                                    ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                </div>
                             </div>
                         ` : ''}
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="action-btn download-btn" onclick="fileManager.downloadFile('${fileId}', '${filename}')">
-                        <i class="fas fa-download"></i> Download
+                    <button class="action-btn download-btn" onclick="fileManager.downloadFile('${fileId}', '${filename}')" title="Download file">
+                        <i class="fas fa-download"></i>
                     </button>
-                    <button class="action-btn versions-btn" onclick="fileManager.showVersions('${file.baseName || filename}')">
-                        <i class="fas fa-history"></i> Versions
+                    <button class="action-btn versions-btn" onclick="fileManager.showVersions('${file.baseName || filename}')" title="View versions">
+                        <i class="fas fa-history"></i>
                     </button>
-                    <button class="action-btn delete-btn" onclick="fileManager.deleteFile('${fileId}', '${filename}')">
-                        <i class="fas fa-trash"></i> Delete
+                    <button class="action-btn delete-btn" onclick="fileManager.deleteFile('${fileId}', '${filename}')" title="Delete file">
+                        <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </div>
@@ -605,31 +751,86 @@ class FileManager {
 
     getFileIcon(filename) {
         if (!filename || typeof filename !== 'string') {
-            return 'fas fa-file'; // Default icon
+            return 'fas fa-file default'; // Default icon with CSS class
         }
+        
         const extension = filename.split('.').pop().toLowerCase();
         
-        switch (extension) {
-            case 'pdf':
-                return 'fas fa-file-pdf';
-            case 'dwg':
-            case 'dxf':
-                return 'fas fa-drafting-compass';
-            case 'jpg':
-            case 'jpeg':
-            case 'png':
-                return 'fas fa-image';
-            case 'zip':
-            case 'rar':
-                return 'fas fa-file-archive';
-            case 'doc':
-            case 'docx':
-                return 'fas fa-file-word';
-            case 'txt':
-                return 'fas fa-file-alt';
-            default:
-                return 'fas fa-file';
+        // PDF files
+        if (extension === 'pdf') {
+            return 'fas fa-file-pdf pdf';
         }
+        
+        // Image files
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico', 'tiff'].includes(extension)) {
+            return 'fas fa-file-image image';
+        }
+        
+        // Video files
+        if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v', '3gp'].includes(extension)) {
+            return 'fas fa-file-video video';
+        }
+        
+        // Audio files
+        if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'].includes(extension)) {
+            return 'fas fa-file-audio audio';
+        }
+        
+        // Document files
+        if (['doc', 'docx'].includes(extension)) {
+            return 'fas fa-file-word document';
+        }
+        
+        // Excel files
+        if (['xls', 'xlsx', 'csv'].includes(extension)) {
+            return 'fas fa-file-excel excel';
+        }
+        
+        // PowerPoint files
+        if (['ppt', 'pptx'].includes(extension)) {
+            return 'fas fa-file-powerpoint powerpoint';
+        }
+        
+        // Archive files
+        if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'].includes(extension)) {
+            return 'fas fa-file-archive archive';
+        }
+        
+        // Code files
+        if (['js', 'ts', 'jsx', 'tsx', 'html', 'htm', 'css', 'scss', 'sass', 'less', 
+             'php', 'py', 'java', 'cpp', 'c', 'h', 'cs', 'rb', 'go', 'rs', 'swift',
+             'kt', 'scala', 'clj', 'hs', 'elm', 'ml', 'r', 'sql', 'json', 'xml', 
+             'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf'].includes(extension)) {
+            return 'fas fa-file-code code';
+        }
+        
+        // Text files
+        if (['txt', 'md', 'markdown', 'rtf', 'log'].includes(extension)) {
+            return 'fas fa-file-alt text';
+        }
+        
+        // CAD files
+        if (['dwg', 'dxf', 'dwf', 'step', 'stp', 'iges', 'igs'].includes(extension)) {
+            return 'fas fa-drafting-compass cad';
+        }
+        
+        // 3D Model files
+        if (['obj', 'fbx', 'dae', 'blend', 'max', 'maya', 'c4d', 'skp'].includes(extension)) {
+            return 'fas fa-cube model';
+        }
+        
+        // Font files
+        if (['ttf', 'otf', 'woff', 'woff2', 'eot'].includes(extension)) {
+            return 'fas fa-font font';
+        }
+        
+        // Executable files
+        if (['exe', 'msi', 'dmg', 'pkg', 'deb', 'rpm', 'appimage'].includes(extension)) {
+            return 'fas fa-cog executable';
+        }
+        
+        // Default icon
+        return 'fas fa-file default';
     }
 
     formatFileSize(bytes) {

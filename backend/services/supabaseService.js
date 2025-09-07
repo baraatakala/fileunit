@@ -1,8 +1,10 @@
-require('dotenv').config({ path: '../../.env' });
 const { createClient } = require('@supabase/supabase-js');
 
 class SupabaseFileService {
     constructor() {
+        // Load environment variables from the correct path
+        require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+        
         this.supabaseUrl = process.env.SUPABASE_URL || 'https://vdyuepooqnkwyxnjncva.supabase.co';
         this.supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkeXVlcG9vcW5rd3l4bmpuY3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjY3NDQsImV4cCI6MjA3Mjc0Mjc0NH0.Vq71PYlP5x9KYYdPjCSmYUjp-5mCTaYhJAYdAeZXcNw';
         this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
