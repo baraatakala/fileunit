@@ -732,7 +732,7 @@ class FileManager {
         const versionsModalBody = document.getElementById('versionsModalBody');
         
         versionsModalBody.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading versions...</p></div>';
-        versionsModal.style.display = 'block';
+        versionsModal.classList.add('show');
 
         try {
             const response = await fetch(`/api/files/${encodeURIComponent(baseName)}/versions`);
@@ -834,7 +834,7 @@ class FileManager {
     }
 
     closeVersionsModal() {
-        document.getElementById('versionsModal').style.display = 'none';
+        document.getElementById('versionsModal').classList.remove('show');
     }
 
     // Preview Modal Methods
