@@ -121,8 +121,13 @@ class FileManager {
         // Upload button
         uploadBtn.addEventListener('click', this.uploadFiles.bind(this));
 
-        // Search and refresh
+        // Search and filters
         document.getElementById('searchInput').addEventListener('input', this.handleSearch.bind(this));
+        document.getElementById('clearSearchBtn').addEventListener('click', this.clearSearch.bind(this));
+        document.getElementById('fileTypeFilter').addEventListener('change', this.handleFilter.bind(this));
+        document.getElementById('sortBy').addEventListener('change', this.handleSort.bind(this));
+        document.getElementById('sizeFilter').addEventListener('change', this.handleFilter.bind(this));
+        document.getElementById('filterToggleBtn').addEventListener('click', this.toggleFilters.bind(this));
         document.getElementById('refreshBtn').addEventListener('click', this.loadFiles.bind(this));
 
         // Theme toggle
@@ -169,16 +174,28 @@ class FileManager {
         // Modals
         document.getElementById('closeModal').addEventListener('click', this.closeModal.bind(this));
         document.getElementById('closeVersionsModal').addEventListener('click', this.closeVersionsModal.bind(this));
+        document.getElementById('closePreviewModal').addEventListener('click', this.closePreviewModal.bind(this));
+
+        // Preview controls
+        document.getElementById('zoomInBtn').addEventListener('click', this.zoomIn.bind(this));
+        document.getElementById('zoomOutBtn').addEventListener('click', this.zoomOut.bind(this));
+        document.getElementById('resetZoomBtn').addEventListener('click', this.resetZoom.bind(this));
+        document.getElementById('fullscreenBtn').addEventListener('click', this.toggleFullscreen.bind(this));
+        document.getElementById('previewDownloadBtn').addEventListener('click', this.downloadFromPreview.bind(this));
 
         // Close modals when clicking outside
         window.addEventListener('click', (e) => {
             const fileModal = document.getElementById('fileModal');
             const versionsModal = document.getElementById('versionsModal');
+            const previewModal = document.getElementById('previewModal');
             if (e.target === fileModal) {
                 this.closeModal();
             }
             if (e.target === versionsModal) {
                 this.closeVersionsModal();
+            }
+            if (e.target === previewModal) {
+                this.closePreviewModal();
             }
         });
     }
@@ -345,18 +362,23 @@ class FileManager {
 
     validateFile(file) {
         const maxSize = 500 * 1024 * 1024; // 500MB
-        const allowedExtensions = ['.pdf', '.dwg', '.dxf', '.jpg', '.jpeg', '.png', '.zip', '.doc', '.docx', '.txt'];
+        const allowedExtensions = [
+            '.pdf', '.dwg', '.dxf', '.jpg', '.jpeg', '.png', '.gif', '.webp', 
+            '.zip', '.rar', '.7z', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx'
+        ];
         
         // Check size
         if (file.size > maxSize) {
-            this.showNotification(`File ${file.name} exceeds 500MB limit`, 'error');
+            // Support Arabic error messages
+            this.showNotification(`الملف "${file.name}" كبير جداً (أكثر من 500 ميجابايت) / File "${file.name}" exceeds 500MB limit`, 'error');
             return false;
         }
 
-        // Check extension
+        // Check extension with proper Unicode support
         const extension = '.' + file.name.split('.').pop().toLowerCase();
         if (!allowedExtensions.includes(extension)) {
-            this.showNotification(`File type ${extension} not supported`, 'error');
+            const supportedTypes = 'PDF, DWG, DXF, Images, Excel (XLS/XLSX), Word, PowerPoint, ZIP';
+            this.showNotification(`نوع الملف "${extension}" غير مدعوم / File type "${extension}" not supported. Supported: ${supportedTypes}`, 'error');
             return false;
         }
 
@@ -464,7 +486,25 @@ class FileManager {
 
     async uploadSingleFile(file) {
         const formData = new FormData();
-        formData.append('file', file);
+        
+        // Ensure proper encoding for Arabic filenames
+        console.log('📤 Original filename:', file.name);
+        
+        // Create a new file object with proper UTF-8 encoding if needed
+        let processedFile = file;
+        if (file.name && (file.name.includes('Ø') || file.name.includes('Ù'))) {
+            console.log('🔤 Detected corrupted Arabic filename, attempting fix...');
+            try {
+                // Create new file with corrected name
+                const properName = this.fixArabicFilename(file.name);
+                processedFile = new File([file], properName, { type: file.type });
+                console.log('✅ Fixed filename:', properName);
+            } catch (error) {
+                console.log('⚠️ Filename fix failed:', error);
+            }
+        }
+        
+        formData.append('file', processedFile);
         
         const description = document.getElementById('description').value;
         const tags = document.getElementById('tags').value;
@@ -474,7 +514,12 @@ class FileManager {
 
         const response = await fetch('/api/upload', {
             method: 'POST',
-            body: formData
+            body: formData,
+            // Ensure proper encoding
+            headers: {
+                'Accept': 'application/json',
+                // Don't set Content-Type, let browser set it with boundary for FormData
+            }
         });
 
         if (!response.ok) {
@@ -530,6 +575,8 @@ class FileManager {
                 data: files 
             });
             
+            // Store current files for filtering
+            this.currentFiles = files;
             this.renderFiles(files);
         } catch (error) {
             console.error('Load files error:', error);
@@ -582,28 +629,23 @@ class FileManager {
         
         console.log('Final files array for filtering:', files);
         
-        // Filter files based on search term - handle different property names
-        const filteredFiles = files.filter(file => {
-            if (!file || typeof file !== 'object') return false;
-            
-            // Get filename from various possible properties
-            const filename = file.originalName || file.filename || file.name || '';
-            const description = file.description || '';
-            const tags = file.tags || [];
-            
-            // Safely check if any field matches the search term
-            return filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                   description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                   (Array.isArray(tags) && tags.some(tag => 
-                       typeof tag === 'string' && tag.toLowerCase().includes(searchTerm.toLowerCase())
-                   ));
-        });
+        // Apply advanced filters
+        let filteredFiles = this.applyFilters(files, searchTerm);
+        
+        // Apply sorting
+        filteredFiles = this.applySorting(filteredFiles);
+        
+        // Update statistics
+        this.updateFileStats(filteredFiles, files.length);
 
         if (filteredFiles.length === 0) {
+            const hasFilters = searchTerm || this.hasActiveFilters();
             filesGrid.innerHTML = `
                 <div class="empty-state">
-                    <i class="fas fa-folder-open"></i>
-                    <p>${searchTerm ? 'No files match your search.' : 'No files uploaded yet.'}</p>
+                    <i class="fas fa-${hasFilters ? 'search' : 'folder-open'}"></i>
+                    <h3>${hasFilters ? 'لا توجد نتائج / No Results' : 'لا توجد ملفات / No Files Yet'}</h3>
+                    <p>${hasFilters ? 'جرب تعديل البحث أو المرشحات / Try adjusting your search or filters' : 'ابدأ برفع الملفات / Start by uploading some files'}</p>
+                    ${hasFilters ? '<button class="action-btn" onclick="fileManager.clearAllFilters()"><i class="fas fa-times"></i> Clear Filters</button>' : ''}
                 </div>
             `;
             return;
@@ -667,6 +709,9 @@ class FileManager {
                     </div>
                 </div>
                 <div class="file-actions">
+                    <button class="action-btn preview-action-btn" onclick="fileManager.previewFile('${fileId}', '${filename}', '${file.mimetype || ''}')" title="Preview file">
+                        <i class="fas fa-eye"></i>
+                    </button>
                     <button class="action-btn download-btn" onclick="fileManager.downloadFile('${fileId}', '${filename}')" title="Download file">
                         <i class="fas fa-download"></i>
                     </button>
@@ -790,6 +835,427 @@ class FileManager {
 
     closeVersionsModal() {
         document.getElementById('versionsModal').style.display = 'none';
+    }
+
+    // Preview Modal Methods
+    async previewFile(fileId, filename, mimetype = '') {
+        const previewModal = document.getElementById('previewModal');
+        const previewModalTitle = document.getElementById('previewModalTitle');
+        const previewModalBody = document.getElementById('previewModalBody');
+        const previewFileInfo = document.getElementById('previewFileInfo');
+        
+        // Store current file info for download
+        this.currentPreviewFile = { fileId, filename };
+        
+        // Set modal title and info
+        previewModalTitle.textContent = `Preview: ${filename}`;
+        previewFileInfo.textContent = `${filename} • ${this.formatFileSize(0)}`;
+        
+        // Show loading
+        previewModalBody.innerHTML = `
+            <div class="preview-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading preview...</p>
+            </div>
+        `;
+        
+        // Show modal
+        previewModal.classList.add('show');
+        previewModal.style.display = 'block';
+        
+        try {
+            // Determine file type and show appropriate preview
+            const fileExtension = filename.split('.').pop().toLowerCase();
+            
+            if (this.isImageFile(fileExtension)) {
+                await this.previewImage(fileId, filename);
+            } else if (this.isPdfFile(fileExtension)) {
+                await this.previewPdf(fileId, filename);
+            } else if (this.isTextFile(fileExtension)) {
+                await this.previewText(fileId, filename);
+            } else if (this.isExcelFile(fileExtension)) {
+                await this.previewExcel(fileId, filename);
+            } else if (this.isCadFile(fileExtension)) {
+                await this.previewCad(fileId, filename);
+            } else {
+                this.showUnsupportedPreview(filename, fileExtension);
+            }
+        } catch (error) {
+            console.error('Preview error:', error);
+            this.showPreviewError(filename, error.message);
+        }
+    }
+
+    closePreviewModal() {
+        const previewModal = document.getElementById('previewModal');
+        previewModal.classList.remove('show', 'fullscreen');
+        previewModal.style.display = 'none';
+        
+        // Reset zoom
+        this.currentZoom = 1;
+        this.currentPreviewFile = null;
+        
+        // Clean up any iframes or large content
+        const previewModalBody = document.getElementById('previewModalBody');
+        previewModalBody.innerHTML = '';
+    }
+
+    async previewImage(fileId, filename) {
+        const previewModalBody = document.getElementById('previewModalBody');
+        
+        try {
+            const downloadUrl = `/api/download/${fileId}`;
+            
+            previewModalBody.innerHTML = `
+                <div class="preview-container">
+                    <div class="preview-type-indicator">
+                        <i class="fas fa-image"></i> Image
+                    </div>
+                    <div class="zoom-container">
+                        <div class="zoom-info" id="zoomInfo">100%</div>
+                        <img class="preview-image zoomable" src="${downloadUrl}" alt="${filename}" 
+                             onload="this.style.opacity='1'" 
+                             onerror="fileManager.showPreviewError('${filename}', 'Failed to load image')"
+                             style="opacity: 0; transition: opacity 0.3s ease;">
+                    </div>
+                </div>
+            `;
+            
+            // Add pan and zoom functionality
+            this.addImageInteractivity();
+            
+        } catch (error) {
+            this.showPreviewError(filename, error.message);
+        }
+    }
+
+    async previewPdf(fileId, filename) {
+        const previewModalBody = document.getElementById('previewModalBody');
+        
+        try {
+            const downloadUrl = `/api/download/${fileId}`;
+            
+            previewModalBody.innerHTML = `
+                <div class="preview-container">
+                    <div class="preview-type-indicator">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </div>
+                    <iframe class="preview-pdf" src="${downloadUrl}" type="application/pdf">
+                        <div class="preview-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>PDF Preview Not Available</h3>
+                            <p>Your browser doesn't support PDF preview. Please download to view.</p>
+                            <button class="action-btn download-btn" onclick="fileManager.downloadFile('${fileId}', '${filename}')">
+                                <i class="fas fa-download"></i> Download PDF
+                            </button>
+                        </div>
+                    </iframe>
+                </div>
+            `;
+        } catch (error) {
+            this.showPreviewError(filename, error.message);
+        }
+    }
+
+    async previewText(fileId, filename) {
+        const previewModalBody = document.getElementById('previewModalBody');
+        
+        try {
+            const response = await fetch(`/api/download/${fileId}`);
+            if (!response.ok) throw new Error('Failed to load file');
+            
+            const text = await response.text();
+            const truncatedText = text.length > 10000 ? text.substring(0, 10000) + '\n\n... (File truncated for preview. Download to see full content)' : text;
+            
+            previewModalBody.innerHTML = `
+                <div class="preview-container">
+                    <div class="preview-type-indicator">
+                        <i class="fas fa-file-alt"></i> Text
+                    </div>
+                    <pre class="preview-document">${this.escapeHtml(truncatedText)}</pre>
+                </div>
+            `;
+        } catch (error) {
+            this.showPreviewError(filename, error.message);
+        }
+    }
+
+    async previewExcel(fileId, filename) {
+        const previewModalBody = document.getElementById('previewModalBody');
+        const fileExtension = filename.split('.').pop().toLowerCase();
+        
+        // For Excel files, show info and suggest tools
+        previewModalBody.innerHTML = `
+            <div class="preview-container">
+                <div class="preview-type-indicator">
+                    <i class="fas fa-file-excel"></i> Excel File
+                </div>
+                <div class="preview-cad"> 
+                    <i class="fas fa-file-excel" style="color: #217346;"></i>
+                    <h3>${fileExtension.toUpperCase()} Spreadsheet Preview</h3>
+                    <p>Excel files contain spreadsheet data, calculations, and charts. Best viewed in spreadsheet software.</p>
+                    
+                    <div class="cad-info-grid">
+                        <div class="cad-info-item">
+                            <strong>ملف إكسل / File Type</strong>
+                            ${fileExtension.toUpperCase()} - Microsoft Excel Spreadsheet
+                        </div>
+                        <div class="cad-info-item">
+                            <strong>البرامج المستخدمة / Recommended Software</strong>
+                            Microsoft Excel, LibreOffice Calc, Google Sheets
+                        </div>
+                        <div class="cad-info-item">
+                            <strong>المحتويات / Contains</strong>
+                            Data tables, formulas, charts, calculations
+                        </div>
+                        <div class="cad-info-item">
+                            <strong>الاستخدام / Industry Use</strong>
+                            Project management, cost estimation, schedules
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px;">
+                        <button class="action-btn download-btn" onclick="fileManager.downloadFile('${fileId}', '${filename}')" style="font-size: 1.1rem; padding: 12px 24px;">
+                            <i class="fas fa-download"></i> تحميل للعرض / Download to View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async previewCad(fileId, filename) {
+        const previewModalBody = document.getElementById('previewModalBody');
+        const fileExtension = filename.split('.').pop().toLowerCase();
+        
+        // For CAD files, show info and suggest tools
+        previewModalBody.innerHTML = `
+            <div class="preview-container">
+                <div class="preview-type-indicator">
+                    <i class="fas fa-drafting-compass"></i> CAD File
+                </div>
+                <div class="preview-cad">
+                    <i class="fas fa-drafting-compass"></i>
+                    <h3>${fileExtension.toUpperCase()} File Preview</h3>
+                    <p>ملفات الكاد تتطلب برامج متخصصة للعرض. يحتوي هذا الملف على رسومات تقنية وتصاميم. / CAD files require specialized software for viewing. This file contains technical drawings and designs.</p>
+                    
+                    <div class="cad-info-grid">
+                        <div class="cad-info-item">
+                            <strong>نوع الملف / File Type</strong>
+                            ${fileExtension.toUpperCase()} - Computer Aided Design
+                        </div>
+                        <div class="cad-info-item">
+                            <strong>البرامج المُوصى بها / Recommended Software</strong>
+                            AutoCAD, DraftSight, FreeCAD, LibreCAD
+                        </div>
+                        <div class="cad-info-item">
+                            <strong>المحتويات / Contains</strong>
+                            Technical drawings, blueprints, 2D/3D models
+                        </div>
+                        <div class="cad-info-item">
+                            <strong>الاستخدام / Industry Use</strong>
+                            Architecture, Engineering, Construction
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px;">
+                        <button class="action-btn download-btn" onclick="fileManager.downloadFile('${fileId}', '${filename}')" style="font-size: 1.1rem; padding: 12px 24px;">
+                            <i class="fas fa-download"></i> تحميل للعرض / Download to View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    showUnsupportedPreview(filename, extension) {
+        const previewModalBody = document.getElementById('previewModalBody');
+        
+        previewModalBody.innerHTML = `
+            <div class="preview-container">
+                <div class="preview-error">
+                    <i class="fas fa-file"></i>
+                    <h3>Preview Not Available</h3>
+                    <p>المعاينة غير متوفرة لملفات .${extension} / Preview is not supported for .${extension} files.</p>
+                    <p>الصيغ المدعومة / Supported formats: Images (JPG, PNG, GIF), PDF, Text files, Excel (XLS, XLSX), CAD files (DWG, DXF)</p>
+                    <button class="action-btn download-btn" onclick="fileManager.downloadFromPreview()">
+                        <i class="fas fa-download"></i> Download File
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    showPreviewError(filename, errorMessage) {
+        const previewModalBody = document.getElementById('previewModalBody');
+        
+        previewModalBody.innerHTML = `
+            <div class="preview-container">
+                <div class="preview-error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Preview Error</h3>
+                    <p>Unable to preview "${filename}"</p>
+                    <p class="error-details">${errorMessage}</p>
+                    <button class="action-btn download-btn" onclick="fileManager.downloadFromPreview()">
+                        <i class="fas fa-download"></i> Download File
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    // Preview utility methods
+    isImageFile(extension) {
+        return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension);
+    }
+
+    isPdfFile(extension) {
+        return extension === 'pdf';
+    }
+
+    isTextFile(extension) {
+        return ['txt', 'md', 'json', 'xml', 'csv', 'log'].includes(extension);
+    }
+
+    isExcelFile(extension) {
+        return ['xls', 'xlsx'].includes(extension);
+    }
+
+    isCadFile(extension) {
+        return ['dwg', 'dxf'].includes(extension);
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Zoom and pan functionality
+    currentZoom = 1;
+    minZoom = 0.1;
+    maxZoom = 5;
+    
+    addImageInteractivity() {
+        const img = document.querySelector('.preview-image');
+        if (!img) return;
+        
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+        
+        // Mouse wheel zoom
+        img.parentElement.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            this.zoomImage(delta, e.clientX, e.clientY);
+        });
+        
+        // Touch zoom (pinch)
+        let initialDistance = 0;
+        img.parentElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                initialDistance = this.getDistance(e.touches[0], e.touches[1]);
+            }
+        });
+        
+        img.parentElement.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const currentDistance = this.getDistance(e.touches[0], e.touches[1]);
+                const scale = currentDistance / initialDistance;
+                this.zoomImage(scale, 0, 0);
+                initialDistance = currentDistance;
+            }
+        });
+        
+        // Drag functionality
+        img.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            img.style.cursor = 'grabbing';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${this.currentZoom})`;
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            if (img) img.style.cursor = 'grab';
+        });
+    }
+
+    getDistance(touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    zoomImage(delta, clientX = 0, clientY = 0) {
+        const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.currentZoom * delta));
+        if (newZoom === this.currentZoom) return;
+        
+        this.currentZoom = newZoom;
+        const img = document.querySelector('.preview-image');
+        const zoomInfo = document.getElementById('zoomInfo');
+        
+        if (img) {
+            img.style.transform = `translate(0, 0) scale(${this.currentZoom})`;
+            img.style.transformOrigin = 'center center';
+        }
+        
+        if (zoomInfo) {
+            zoomInfo.textContent = `${Math.round(this.currentZoom * 100)}%`;
+        }
+    }
+
+    // Zoom control methods
+    zoomIn() {
+        this.zoomImage(1.2);
+    }
+
+    zoomOut() {
+        this.zoomImage(0.8);
+    }
+
+    resetZoom() {
+        this.currentZoom = 1;
+        const img = document.querySelector('.preview-image');
+        const zoomInfo = document.getElementById('zoomInfo');
+        
+        if (img) {
+            img.style.transform = 'translate(0, 0) scale(1)';
+        }
+        
+        if (zoomInfo) {
+            zoomInfo.textContent = '100%';
+        }
+    }
+
+    toggleFullscreen() {
+        const previewModal = document.getElementById('previewModal');
+        previewModal.classList.toggle('fullscreen');
+        
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const icon = fullscreenBtn.querySelector('i');
+        
+        if (previewModal.classList.contains('fullscreen')) {
+            icon.className = 'fas fa-compress';
+            fullscreenBtn.title = 'Exit Fullscreen';
+        } else {
+            icon.className = 'fas fa-expand';
+            fullscreenBtn.title = 'Fullscreen';
+        }
+    }
+
+    downloadFromPreview() {
+        if (this.currentPreviewFile) {
+            this.downloadFile(this.currentPreviewFile.fileId, this.currentPreviewFile.filename);
+        }
     }
 
     getFileIcon(filename) {
@@ -981,6 +1447,317 @@ class FileManager {
     initView() {
         const savedView = localStorage.getItem('viewType') || 'grid';
         this.switchView(savedView);
+    }
+
+    // ==================== ADVANCED SEARCH & FILTERING METHODS ====================
+    
+    applyFilters(files, searchTerm = '') {
+        const fileTypeFilter = document.getElementById('fileTypeFilter').value;
+        const sizeFilter = document.getElementById('sizeFilter').value;
+        
+        return files.filter(file => {
+            if (!file || typeof file !== 'object') return false;
+            
+            // Get file properties with Arabic support
+            const filename = file.originalName || file.filename || file.name || '';
+            const description = file.description || '';
+            const fileSize = file.size || file.file_size || 0;
+            let tags = file.tags || [];
+            
+            // Handle tags (might be JSON string or array)
+            if (typeof tags === 'string') {
+                try {
+                    tags = JSON.parse(tags);
+                } catch (e) {
+                    tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                }
+            }
+            if (!Array.isArray(tags)) tags = [];
+            
+            // Search filter (supports Arabic and English)
+            if (searchTerm) {
+                const searchLower = searchTerm.toLowerCase();
+                const matchesSearch = 
+                    filename.toLowerCase().includes(searchLower) ||
+                    description.toLowerCase().includes(searchLower) ||
+                    tags.some(tag => tag.toLowerCase().includes(searchLower));
+                
+                if (!matchesSearch) return false;
+            }
+            
+            // File type filter
+            if (fileTypeFilter) {
+                const fileType = this.getFileCategory(filename);
+                if (fileType !== fileTypeFilter) return false;
+            }
+            
+            // Size filter
+            if (sizeFilter) {
+                const sizeInMB = fileSize / (1024 * 1024);
+                switch (sizeFilter) {
+                    case 'small':
+                        if (sizeInMB >= 1) return false;
+                        break;
+                    case 'medium':
+                        if (sizeInMB < 1 || sizeInMB > 10) return false;
+                        break;
+                    case 'large':
+                        if (sizeInMB < 10 || sizeInMB > 100) return false;
+                        break;
+                    case 'xlarge':
+                        if (sizeInMB <= 100) return false;
+                        break;
+                }
+            }
+            
+            return true;
+        });
+    }
+
+    applySorting(files) {
+        const sortBy = document.getElementById('sortBy').value;
+        
+        return files.sort((a, b) => {
+            const aName = a.originalName || a.filename || a.name || '';
+            const bName = b.originalName || b.filename || b.name || '';
+            const aSize = a.size || a.file_size || 0;
+            const bSize = b.size || b.file_size || 0;
+            const aDate = new Date(a.uploadedAt || a.uploaded_at || a.created_at || 0);
+            const bDate = new Date(b.uploadedAt || b.uploaded_at || b.created_at || 0);
+            
+            switch (sortBy) {
+                case 'name-asc':
+                    return aName.localeCompare(bName, ['ar', 'en'], { numeric: true });
+                case 'name-desc':
+                    return bName.localeCompare(aName, ['ar', 'en'], { numeric: true });
+                case 'size-asc':
+                    return aSize - bSize;
+                case 'size-desc':
+                    return bSize - aSize;
+                case 'date-asc':
+                    return aDate - bDate;
+                case 'date-desc':
+                    return bDate - aDate;
+                case 'type-asc':
+                    const aType = this.getFileCategory(aName);
+                    const bType = this.getFileCategory(bName);
+                    return aType.localeCompare(bType);
+                default:
+                    return bDate - aDate; // Default to newest first
+            }
+        });
+    }
+
+    getFileCategory(filename) {
+        if (!filename) return 'other';
+        const extension = filename.split('.').pop().toLowerCase();
+        
+        if (extension === 'pdf') return 'pdf';
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) return 'image';
+        if (['dwg', 'dxf'].includes(extension)) return 'cad';
+        if (['xls', 'xlsx'].includes(extension)) return 'excel';
+        if (['doc', 'docx', 'txt'].includes(extension)) return 'document';
+        if (['zip', 'rar', '7z'].includes(extension)) return 'archive';
+        return 'other';
+    }
+
+    updateFileStats(filteredFiles, totalFiles) {
+        const totalFilesElement = document.getElementById('totalFiles');
+        const totalSizeElement = document.getElementById('totalSize');
+        
+        if (totalFilesElement) {
+            const displayText = filteredFiles.length !== totalFiles 
+                ? `${filteredFiles.length} of ${totalFiles}` 
+                : `${totalFiles}`;
+            totalFilesElement.textContent = displayText;
+        }
+        
+        if (totalSizeElement) {
+            const totalSize = filteredFiles.reduce((sum, file) => {
+                return sum + (file.size || file.file_size || 0);
+            }, 0);
+            totalSizeElement.textContent = this.formatFileSize(totalSize);
+        }
+    }
+
+    hasActiveFilters() {
+        const searchInput = document.getElementById('searchInput');
+        const fileTypeFilter = document.getElementById('fileTypeFilter');
+        const sizeFilter = document.getElementById('sizeFilter');
+        
+        return (searchInput && searchInput.value.trim()) ||
+               (fileTypeFilter && fileTypeFilter.value) ||
+               (sizeFilter && sizeFilter.value);
+    }
+
+    // Filter and search event handlers
+    handleSearch(e) {
+        const searchTerm = e.target.value.trim();
+        const clearBtn = document.getElementById('clearSearchBtn');
+        
+        // Show/hide clear button
+        if (searchTerm) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+        
+        // Debounce search for better performance
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            this.applyFiltersAndRender();
+        }, 300);
+    }
+
+    handleFilter() {
+        this.applyFiltersAndRender();
+        this.updateActiveFilterTags();
+    }
+
+    handleSort() {
+        this.applyFiltersAndRender();
+    }
+
+    clearSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+        this.applyFiltersAndRender();
+    }
+
+    clearAllFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('fileTypeFilter').value = '';
+        document.getElementById('sizeFilter').value = '';
+        document.getElementById('sortBy').value = 'date-desc';
+        document.getElementById('clearSearchBtn').style.display = 'none';
+        
+        this.applyFiltersAndRender();
+        this.updateActiveFilterTags();
+    }
+
+    toggleFilters() {
+        const filtersContainer = document.querySelector('.filters-container');
+        const filterBtn = document.getElementById('filterToggleBtn');
+        const icon = filterBtn.querySelector('i');
+        
+        filtersContainer.classList.toggle('hidden');
+        
+        if (filtersContainer.classList.contains('hidden')) {
+            icon.className = 'fas fa-filter';
+            filterBtn.title = 'Show Filters';
+        } else {
+            icon.className = 'fas fa-filter-circle-xmark';
+            filterBtn.title = 'Hide Filters';
+        }
+    }
+
+    updateActiveFilterTags() {
+        const filterTagsContainer = document.getElementById('filterTags');
+        const tags = [];
+        
+        const fileTypeFilter = document.getElementById('fileTypeFilter').value;
+        const sizeFilter = document.getElementById('sizeFilter').value;
+        const searchInput = document.getElementById('searchInput').value.trim();
+        
+        if (searchInput) {
+            tags.push({ type: 'search', label: `Search: "${searchInput}"`, value: 'search' });
+        }
+        
+        if (fileTypeFilter) {
+            const typeLabels = {
+                'pdf': 'PDF Files',
+                'image': 'Images', 
+                'cad': 'CAD Files',
+                'excel': 'Excel Files',
+                'document': 'Documents',
+                'archive': 'Archives'
+            };
+            tags.push({ type: 'type', label: `Type: ${typeLabels[fileTypeFilter]}`, value: 'fileType' });
+        }
+        
+        if (sizeFilter) {
+            const sizeLabels = {
+                'small': '< 1 MB',
+                'medium': '1-10 MB',
+                'large': '10-100 MB',
+                'xlarge': '> 100 MB'
+            };
+            tags.push({ type: 'size', label: `Size: ${sizeLabels[sizeFilter]}`, value: 'size' });
+        }
+        
+        if (tags.length > 0) {
+            filterTagsContainer.innerHTML = tags.map(tag => 
+                `<span class="filter-tag" data-filter="${tag.value}">
+                    ${tag.label}
+                    <button onclick="fileManager.removeFilter('${tag.value}')" title="Remove filter">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>`
+            ).join('');
+            filterTagsContainer.style.display = 'flex';
+        } else {
+            filterTagsContainer.style.display = 'none';
+        }
+    }
+
+    removeFilter(filterType) {
+        switch (filterType) {
+            case 'search':
+                this.clearSearch();
+                break;
+            case 'fileType':
+                document.getElementById('fileTypeFilter').value = '';
+                break;
+            case 'size':
+                document.getElementById('sizeFilter').value = '';
+                break;
+        }
+        this.handleFilter();
+    }
+
+    applyFiltersAndRender() {
+        // Get current files from the last loaded data
+        if (this.currentFiles) {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            this.renderFiles(this.currentFiles, searchTerm);
+        } else {
+            this.loadFiles(); // Reload if no current data
+        }
+    }
+
+    // Fix corrupted Arabic filenames (from Latin-1 to UTF-8)
+    fixArabicFilename(filename) {
+        if (!filename || typeof filename !== 'string') return filename;
+        
+        // Check if this looks like corrupted Arabic (Latin-1 encoded)
+        if (filename.includes('Ø') || filename.includes('Ù') || filename.includes('Ú') || filename.includes('Û')) {
+            try {
+                // Convert from Latin-1 to UTF-8
+                const encoder = new TextEncoder();
+                const decoder = new TextDecoder('utf-8');
+                
+                // First encode as Latin-1 bytes
+                const latin1Bytes = new Uint8Array(filename.length);
+                for (let i = 0; i < filename.length; i++) {
+                    latin1Bytes[i] = filename.charCodeAt(i) & 0xFF;
+                }
+                
+                // Then decode as UTF-8
+                const fixedName = decoder.decode(latin1Bytes);
+                
+                // Basic validation - check if it contains Arabic characters
+                if (/[\u0600-\u06FF\u0750-\u077F]/.test(fixedName)) {
+                    return fixedName;
+                }
+            } catch (error) {
+                console.warn('Failed to fix Arabic filename:', error);
+            }
+        }
+        
+        return filename;
     }
 }
 

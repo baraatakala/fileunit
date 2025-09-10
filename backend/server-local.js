@@ -94,7 +94,7 @@ app.use(helmet({
             ],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
-            frameSrc: ["'none'"]
+            frameSrc: ["'self'"] // Allow iframes from same origin for file previews
         }
     }
 }));
@@ -109,37 +109,82 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Configure multer for file uploads - use memory storage for binary files
+// Configure multer for file uploads - use memory storage for binary files with UTF-8 support
 const upload = multer({
     storage: multer.memoryStorage(), // Use memory storage to preserve buffer for binary files
     limits: {
         fileSize: 500 * 1024 * 1024 // 500MB limit
     },
     fileFilter: (req, file, cb) => {
-        // Allow specific file types for construction
+        // Ensure proper UTF-8 encoding for Arabic filenames
+        if (file.originalname) {
+            try {
+                // Check if filename contains corrupted Arabic characters
+                if (file.originalname.includes('Ø') || file.originalname.includes('Ù') || file.originalname.includes('ÙØ')) {
+                    // This indicates Latin-1 encoded Arabic, convert to UTF-8
+                    const properUtf8Name = Buffer.from(file.originalname, 'latin1').toString('utf8');
+                    file.originalname = properUtf8Name;
+                    console.log('✅ Fixed Arabic filename:', properUtf8Name);
+                }
+            } catch (error) {
+                console.log('⚠️ Filename encoding fix failed, using original:', error);
+            }
+        }
+        // Allow specific file types for construction with Arabic filename support
         const allowedTypes = [
+            // Documents
             'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+            
+            // Images
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            
+            // CAD Files
             'image/dwg',
             'application/dwg',
             'application/x-dwg',
             'application/x-autocad',
-            'image/jpeg',
-            'image/jpg',
-            'image/png',
+            'application/acad',
+            'image/vnd.dwg',
+            'drawing/dwg',
+            'image/vnd.dxf',
+            'application/dxf',
+            
+            // Archives
             'application/zip',
             'application/x-zip-compressed',
-            'text/plain',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            'application/x-rar-compressed',
+            'application/x-7z-compressed',
+            
+            // Excel Files
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            
+            // PowerPoint Files
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
         ];
         
         const mimeType = file.mimetype;
         const extension = path.extname(file.originalname).toLowerCase();
         
-        if (allowedTypes.includes(mimeType) || ['.dwg', '.dxf'].includes(extension)) {
+        // Support for various file extensions including Excel
+        const allowedExtensions = [
+            '.pdf', '.dwg', '.dxf', '.jpg', '.jpeg', '.png', '.gif', '.webp',
+            '.zip', '.rar', '.7z', '.doc', '.docx', '.txt', 
+            '.xls', '.xlsx', '.ppt', '.pptx'
+        ];
+        
+        if (allowedTypes.includes(mimeType) || allowedExtensions.includes(extension)) {
             cb(null, true);
         } else {
-            cb(new Error('File type not allowed'), false);
+            cb(new Error(`نوع الملف غير مدعوم / File type not allowed: ${extension}. Supported: PDF, DWG, DXF, Images, Excel, Word, PowerPoint, ZIP`), false);
         }
     }
 });

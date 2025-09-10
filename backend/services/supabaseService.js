@@ -17,14 +17,25 @@ class SupabaseFileService {
         console.log('   Bucket:', this.bucketName);
     }
 
-    // Upload file to Supabase Storage
+    // Upload file to Supabase Storage with Arabic filename support
     async uploadFile(file, fileName, userId, description = '', tags = '') {
         try {
-            const fileExtension = fileName.split('.').pop();
+            // Ensure proper UTF-8 encoding for Arabic filenames
+            let cleanFileName = fileName;
+            if (fileName && (fileName.includes('Ø') || fileName.includes('Ù') || fileName.includes('ÙØ'))) {
+                try {
+                    cleanFileName = Buffer.from(fileName, 'latin1').toString('utf8');
+                    console.log('🔤 Fixed Arabic filename in service:', cleanFileName);
+                } catch (error) {
+                    console.log('⚠️ Filename UTF-8 conversion failed:', error);
+                }
+            }
+            
+            const fileExtension = cleanFileName.split('.').pop();
             const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
             const filePath = `uploads/${uniqueFileName}`;
 
-            console.log(`Uploading file to Supabase: ${filePath}`);
+            console.log(`📤 Uploading file to Supabase: ${filePath}`);
 
             // Upload to Supabase Storage
             const { data: uploadData, error: uploadError } = await this.supabase.storage
@@ -46,9 +57,9 @@ class SupabaseFileService {
                 .from(this.bucketName)
                 .getPublicUrl(filePath);
 
-            // Save file metadata to database
+            // Save file metadata to database with proper UTF-8 filename
             const fileMetadata = {
-                filename: fileName,
+                filename: cleanFileName, // Use the properly encoded filename
                 file_path: filePath,
                 file_size: file.size,
                 content_type: file.mimetype,
