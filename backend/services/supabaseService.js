@@ -6,15 +6,20 @@ class SupabaseFileService {
         require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
         
         this.supabaseUrl = process.env.SUPABASE_URL || 'https://vdyuepooqnkwyxnjncva.supabase.co';
-        this.supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkeXVlcG9vcW5rd3l4bmpuY3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjY3NDQsImV4cCI6MjA3Mjc0Mjc0NH0.Vq71PYlP5x9KYYdPjCSmYUjp-5mCTaYhJAYdAeZXcNw';
-        this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
+        // Use ANON_KEY for general operations, SERVICE_KEY for admin operations
+        this.anonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkeXVlcG9vcW5rd3l4bmpuY3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjY3NDQsImV4cCI6MjA3Mjc0Mjc0NH0.Vq71PYlP5x9KYYdPjCSmYUjp-5mCTaYhJAYdAeZXcNw';
+        this.serviceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkeXVlcG9vcW5rd3l4bmpuY3ZhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzE2Njc0NCwiZXhwIjoyMDcyNzQyNzQ0fQ.dBHrV_jKeozT24p6y9YPTYTJqOoXAJjyO9KvQ_yvr3c';
+        
+        // Create clients for both keys
+        this.supabase = createClient(this.supabaseUrl, this.anonKey); // For general operations
+        this.supabaseAdmin = createClient(this.supabaseUrl, this.serviceKey); // For admin operations
         this.bucketName = process.env.STORAGE_BUCKET || 'construction-files';
         
         // Debug logging
         console.log('🔧 SupabaseService initialized with:');
         console.log('   URL:', this.supabaseUrl);
-        console.log('   Key Type:', process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_KEY' : 'ANON_KEY');
-        console.log('   Key:', this.supabaseKey ? 'SET' : 'NOT SET');
+        console.log('   ANON Key:', this.anonKey ? 'SET' : 'NOT SET');
+        console.log('   SERVICE Key:', this.serviceKey ? 'SET' : 'NOT SET');
         console.log('   Bucket:', this.bucketName);
     }
 
@@ -174,8 +179,8 @@ class SupabaseFileService {
         try {
             console.log('Deleting file with ID:', fileId);
             
-            // Get file info first (without .single() to avoid errors)
-            const { data: fileData, error: fetchError } = await this.supabase
+            // Get file info first using admin client
+            const { data: fileData, error: fetchError } = await this.supabaseAdmin
                 .from('files')
                 .select('file_path')
                 .eq('id', fileId);
@@ -189,11 +194,11 @@ class SupabaseFileService {
             if (!fileData || fileData.length === 0) {
                 console.log('File not found in database, proceeding with database cleanup only');
             } else {
-                // Delete from storage
+                // Delete from storage using admin client
                 const filePath = fileData[0].file_path;
                 console.log('Deleting from storage:', filePath);
                 
-                const { error: storageError } = await this.supabase.storage
+                const { error: storageError } = await this.supabaseAdmin.storage
                     .from(this.bucketName)
                     .remove([filePath]);
 
@@ -202,9 +207,9 @@ class SupabaseFileService {
                 }
             }
 
-            // Delete from database (always try this)
+            // Delete from database using admin client
             console.log('Deleting from database...');
-            const { error: dbError } = await this.supabase
+            const { error: dbError } = await this.supabaseAdmin
                 .from('files')
                 .delete()
                 .eq('id', fileId);
@@ -299,8 +304,8 @@ class SupabaseFileService {
             console.log(`🔧 Description: "${description}"`);
             console.log(`🔧 Tags: "${tags}"`);
             
-            // First, let's check if the record exists
-            const { data: existingRecord, error: selectError } = await this.supabase
+            // First, let's check if the record exists using admin client
+            const { data: existingRecord, error: selectError } = await this.supabaseAdmin
                 .from('files')
                 .select('id, filename, description, tags')
                 .eq('id', fileId)
@@ -320,7 +325,8 @@ class SupabaseFileService {
                 tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
             }
             
-            const { data, error } = await this.supabase
+            // Use admin client for update operations
+            const { data, error } = await this.supabaseAdmin
                 .from('files')
                 .update({
                     description: description || null,
