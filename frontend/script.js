@@ -773,7 +773,13 @@ class FileManager {
 
     async downloadFile(fileId, filename) {
         try {
-            // Create a download link and trigger it
+            // For Arabic filenames, use fetch with proper blob handling
+            if (filename && /[\u0600-\u06FF\u0750-\u077F]/.test(filename)) {
+                await this.downloadArabicFile(fileId, filename);
+                return;
+            }
+            
+            // Standard download for non-Arabic filenames
             const downloadUrl = `/api/download/${fileId}`;
             
             // Create a temporary link element
@@ -790,6 +796,47 @@ class FileManager {
         } catch (error) {
             console.error('Download error:', error);
             this.showMessage('Failed to download file: ' + error.message, 'error');
+        }
+    }
+
+    // Special download handling for Arabic filenames
+    async downloadArabicFile(fileId, filename) {
+        try {
+            console.log('🔽 Downloading Arabic file:', filename);
+            
+            const response = await fetch(`/api/download/${fileId}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': '*/*'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Get the file blob
+            const blob = await response.blob();
+            
+            // Create object URL and download
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up object URL
+            window.URL.revokeObjectURL(url);
+            
+            console.log('✅ Arabic file download completed:', filename);
+            
+        } catch (error) {
+            console.error('Arabic download error:', error);
+            throw error;
         }
     }
 

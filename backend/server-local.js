@@ -332,8 +332,14 @@ app.get('/api/download/:fileId', async (req, res) => {
                 throw new Error(`HTTP error! status: ${fileResponse.status}`);
             }
             
-            // Set proper headers for file download
-            res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+            // Set proper headers for file download with Arabic filename support
+            const encodedFilename = encodeURIComponent(file.filename);
+            const asciiFilename = file.filename.replace(/[^\x00-\x7F]/g, ""); // Fallback ASCII name
+            
+            // Use RFC 5987 encoding for proper Arabic filename support
+            res.setHeader('Content-Disposition', 
+                `attachment; filename="${asciiFilename || 'download'}"; filename*=UTF-8''${encodedFilename}`
+            );
             res.setHeader('Content-Type', file.content_type || 'application/octet-stream');
             res.setHeader('Content-Length', fileResponse.headers.get('content-length') || '0');
             res.setHeader('Cache-Control', 'no-cache');
