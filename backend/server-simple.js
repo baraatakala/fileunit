@@ -156,14 +156,15 @@ app.get('/api/files', (req, res) => {
 app.get('/api/files/:baseName/versions', (req, res) => {
     try {
         const { baseName } = req.params;
-        const versions = fileDatabase
+        const matchingFiles = fileDatabase
             .filter(file => file.baseName === baseName)
-            .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
-            .map((file, index) => ({
-                ...file,
-                version: `${versions.length - index}.0`,
-                isLatest: index === 0
-            }));
+            .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+        
+        const versions = matchingFiles.map((file, index) => ({
+            ...file,
+            version: `${matchingFiles.length - index}.0`,
+            isLatest: index === 0
+        }));
         
         console.log(`📋 Found ${versions.length} versions for ${baseName}`);
         res.json(versions);

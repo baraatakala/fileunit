@@ -290,7 +290,23 @@ class SupabaseFileService {
     // Update file metadata (description and tags)
     async updateFileMetadata(fileId, description, tags) {
         try {
-            console.log(`Updating metadata for file ${fileId}`);
+            console.log(`🔧 Updating metadata for file ${fileId}`);
+            console.log(`🔧 Description: "${description}"`);
+            console.log(`🔧 Tags: "${tags}"`);
+            
+            // First, let's check if the record exists
+            const { data: existingRecord, error: selectError } = await this.supabase
+                .from('files')
+                .select('id, filename, description, tags')
+                .eq('id', fileId)
+                .single();
+            
+            if (selectError) {
+                console.error('❌ Error finding record:', selectError);
+                throw new Error(`Record with ID ${fileId} not found: ${selectError.message}`);
+            }
+            
+            console.log(`🔧 Found existing record:`, existingRecord);
             
             const { data, error } = await this.supabase
                 .from('files')
@@ -298,15 +314,16 @@ class SupabaseFileService {
                     description: description || '',
                     tags: tags || ''
                 })
-                .eq('id', fileId);
+                .eq('id', fileId)
+                .select(); // Return updated data
 
             if (error) {
-                console.error('Update metadata error:', error);
+                console.error('❌ Update metadata error:', error);
                 throw error;
             }
 
-            console.log(`Metadata updated successfully for file ${fileId}`);
-            return { success: true };
+            console.log(`✅ Metadata updated successfully for file ${fileId}:`, data);
+            return { success: true, data };
 
         } catch (error) {
             console.error('Update metadata service error:', error);
