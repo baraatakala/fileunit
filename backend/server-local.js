@@ -468,6 +468,104 @@ app.delete('/api/files/:fileId', async (req, res) => {
     }
 });
 
+// Rollback file to a previous version
+app.post('/api/files/rollback/:fileId', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const { targetVersion, filename } = req.body;
+        
+        console.log('Rolling back file:', filename, 'to version:', targetVersion);
+        
+        if (!targetVersion) {
+            return res.status(400).json({ error: 'Target version is required' });
+        }
+        
+        // Get the target version file details
+        const { data: targetFile, error: fetchError } = await supabaseService.supabase
+            .from('files')
+            .select('*')
+            .eq('id', fileId)
+            .single();
+
+        if (fetchError || !targetFile) {
+            console.error('Target file not found:', fetchError);
+            return res.status(404).json({ error: 'Target version not found' });
+        }
+        
+        // Get all current versions of this file
+        const baseName = targetFile.base_name;
+        const { data: allVersions, error: versionsError } = await supabaseService.supabase
+            .from('files')
+            .select('*')
+            .eq('base_name', baseName)
+            .order('version', { ascending: false });
+
+        if (versionsError) {
+            console.error('Error fetching versions:', versionsError);
+            return res.status(500).json({ error: 'Failed to fetch file versions' });
+        }
+
+        // Find current latest version
+        const currentLatest = allVersions.find(v => v.is_latest === true);
+        const targetVersionFile = allVersions.find(v => v.version === targetVersion);
+
+        if (!targetVersionFile) {
+            return res.status(404).json({ error: 'Target version not found' });
+        }
+
+        if (targetVersionFile.is_latest) {
+            return res.status(400).json({ error: 'Cannot rollback to current version' });
+        }
+
+        // Start transaction-like operations
+        const updates = [];
+        
+        // 1. Remove latest flag from current latest version
+        if (currentLatest) {
+            updates.push(
+                supabaseService.supabase
+                    .from('files')
+                    .update({ is_latest: false })
+                    .eq('id', currentLatest.id)
+            );
+        }
+        
+        // 2. Set target version as latest
+        updates.push(
+            supabaseService.supabase
+                .from('files')
+                .update({ 
+                    is_latest: true,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', fileId)
+        );
+
+        // Execute all updates
+        const results = await Promise.all(updates);
+        
+        // Check if any updates failed
+        const errors = results.filter(result => result.error);
+        if (errors.length > 0) {
+            console.error('Rollback update errors:', errors);
+            return res.status(500).json({ error: 'Failed to update version flags' });
+        }
+
+        console.log('✅ Rollback completed successfully');
+        
+        res.json({ 
+            success: true, 
+            message: `Successfully rolled back "${filename}" to version ${targetVersion}`,
+            newLatestVersion: targetVersion,
+            previousLatestVersion: currentLatest ? currentLatest.version : null
+        });
+        
+    } catch (error) {
+        console.error('Rollback error:', error);
+        res.status(500).json({ error: 'Rollback failed', details: error.message });
+    }
+});
+
 // Health check endpoints
 app.get('/api/health', async (req, res) => {
     try {

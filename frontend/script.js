@@ -753,9 +753,12 @@ class FileManager {
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
-                        <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')">
+                        <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')" title="Download this version">
                             <i class="fas fa-download"></i>
                         </button>
+                        ${!version.isLatest ? `<button class="action-btn rollback-btn" onclick="fileManager.rollbackVersion('${version.fileId}', '${version.originalName}', ${version.version})" title="Rollback to this version">
+                            <i class="fas fa-undo"></i> Rollback
+                        </button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -768,6 +771,45 @@ class FileManager {
                     <p>Failed to load versions. Please try again.</p>
                 </div>
             `;
+        }
+    }
+
+    async rollbackVersion(fileId, filename, version) {
+        if (!confirm(`Are you sure you want to rollback "${filename}" to version ${version}?\n\nThis will make version ${version} the new latest version. The current latest version will be preserved as a previous version.`)) {
+            return;
+        }
+
+        try {
+            console.log('🔄 Rolling back file:', filename, 'to version:', version);
+            
+            const response = await fetch(`/api/files/rollback/${fileId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    targetVersion: version,
+                    filename: filename
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('✅ Rollback successful:', result);
+            
+            this.showMessage(`Successfully rolled back "${filename}" to version ${version}`, 'success');
+            
+            // Close versions modal and refresh file list
+            this.closeVersionsModal();
+            await this.loadFiles();
+            
+        } catch (error) {
+            console.error('Rollback error:', error);
+            this.showMessage(`Failed to rollback file: ${error.message}`, 'error');
         }
     }
 
