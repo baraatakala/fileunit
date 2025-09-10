@@ -179,8 +179,8 @@ class SupabaseFileService {
         try {
             console.log('Deleting file with ID:', fileId);
             
-            // Get file info first using admin client
-            const { data: fileData, error: fetchError } = await this.supabaseAdmin
+            // Get file info first using regular client (like deleteFileVersion)
+            const { data: fileData, error: fetchError } = await this.supabase
                 .from('files')
                 .select('file_path')
                 .eq('id', fileId);
@@ -194,11 +194,11 @@ class SupabaseFileService {
             if (!fileData || fileData.length === 0) {
                 console.log('File not found in database, proceeding with database cleanup only');
             } else {
-                // Delete from storage using admin client
+                // Delete from storage using regular client
                 const filePath = fileData[0].file_path;
                 console.log('Deleting from storage:', filePath);
                 
-                const { error: storageError } = await this.supabaseAdmin.storage
+                const { error: storageError } = await this.supabase.storage
                     .from(this.bucketName)
                     .remove([filePath]);
 
@@ -207,9 +207,9 @@ class SupabaseFileService {
                 }
             }
 
-            // Delete from database using admin client
+            // Delete from database using regular client
             console.log('Deleting from database...');
-            const { error: dbError } = await this.supabaseAdmin
+            const { error: dbError } = await this.supabase
                 .from('files')
                 .delete()
                 .eq('id', fileId);
