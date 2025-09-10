@@ -175,6 +175,10 @@ class FileManager {
         document.getElementById('closeModal').addEventListener('click', this.closeModal.bind(this));
         document.getElementById('closeVersionsModal').addEventListener('click', this.closeVersionsModal.bind(this));
         document.getElementById('closePreviewModal').addEventListener('click', this.closePreviewModal.bind(this));
+        
+        // Help modal
+        document.getElementById('helpToggle').addEventListener('click', this.showHelpModal.bind(this));
+        document.getElementById('closeHelpModal').addEventListener('click', this.closeHelpModal.bind(this));
 
         // Preview controls
         document.getElementById('zoomInBtn').addEventListener('click', this.zoomIn.bind(this));
@@ -1636,14 +1640,20 @@ class FileManager {
     }
 
     updateFileStats(filteredFiles, totalFiles) {
+        // Show stats section if there are files
+        const statsSection = document.getElementById('statsSection');
+        if (totalFiles > 0 && statsSection) {
+            statsSection.style.display = 'block';
+        }
+
+        // Update basic stats
         const totalFilesElement = document.getElementById('totalFiles');
         const totalSizeElement = document.getElementById('totalSize');
+        const recentUploadsElement = document.getElementById('recentUploads');
+        const mostCommonTypeElement = document.getElementById('mostCommonType');
         
         if (totalFilesElement) {
-            const displayText = filteredFiles.length !== totalFiles 
-                ? `${filteredFiles.length} of ${totalFiles}` 
-                : `${totalFiles}`;
-            totalFilesElement.textContent = displayText;
+            totalFilesElement.textContent = totalFiles;
         }
         
         if (totalSizeElement) {
@@ -1651,6 +1661,40 @@ class FileManager {
                 return sum + (file.size || file.file_size || 0);
             }, 0);
             totalSizeElement.textContent = this.formatFileSize(totalSize);
+        }
+
+        // Calculate recent uploads (last 7 days)
+        if (recentUploadsElement) {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            
+            const recentCount = filteredFiles.filter(file => {
+                const uploadDate = new Date(file.uploadedAt || file.uploaded_at || file.created_at);
+                return uploadDate >= oneWeekAgo;
+            }).length;
+            
+            recentUploadsElement.textContent = recentCount;
+        }
+
+        // Find most common file type
+        if (mostCommonTypeElement && filteredFiles.length > 0) {
+            const typeCounts = {};
+            filteredFiles.forEach(file => {
+                const filename = file.originalName || file.filename || file.name || '';
+                const type = this.getFileCategory(filename).toUpperCase();
+                typeCounts[type] = (typeCounts[type] || 0) + 1;
+            });
+            
+            let mostCommonType = 'PDF';
+            let maxCount = 0;
+            for (const [type, count] of Object.entries(typeCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostCommonType = type;
+                }
+            }
+            
+            mostCommonTypeElement.textContent = mostCommonType;
         }
     }
 
@@ -1858,6 +1902,27 @@ class FileManager {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 4000);
+    }
+
+    // Help modal methods
+    showHelpModal() {
+        const helpModal = document.getElementById('helpModal');
+        helpModal.style.display = 'block';
+        
+        // Add click-outside-to-close functionality
+        setTimeout(() => {
+            const closeOnOutsideClick = (e) => {
+                if (e.target === helpModal) {
+                    this.closeHelpModal();
+                    helpModal.removeEventListener('click', closeOnOutsideClick);
+                }
+            };
+            helpModal.addEventListener('click', closeOnOutsideClick);
+        }, 100);
+    }
+
+    closeHelpModal() {
+        document.getElementById('helpModal').style.display = 'none';
     }
 }
 

@@ -22,6 +22,10 @@
         <i class="fas fa-moon"></i>
     </div>
     
+    <div class="help-toggle" id="helpToggle" title="Quick Help & Info">
+        <i class="fas fa-question-circle"></i>
+    </div>
+    
     <div class="container">
         <header class="header">
             <h1><i class="fas fa-hard-hat"></i> Construction File Sharing</h1>
@@ -81,6 +85,49 @@
                 <div class="progress-fill" id="progressFill"></div>
             </div>
             <div class="progress-text" id="progressText">0%</div>
+        </div>
+
+        <!-- File Statistics Section -->
+        <div class="stats-section" id="statsSection" style="display: none;">
+            <h3><i class="fas fa-chart-bar"></i> File Statistics</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-files"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4 id="totalFiles">0</h4>
+                        <p>Total Files</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4 id="totalSize">0 MB</h4>
+                        <p>Total Size</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4 id="recentUploads">0</h4>
+                        <p>This Week</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h4 id="mostCommonType">PDF</h4>
+                        <p>Most Common</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Files Section -->
@@ -247,6 +294,70 @@
                             <i class="fas fa-download"></i> Download
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-info-circle"></i> Quick Help & Platform Info</h3>
+                <button class="close-btn" id="closeHelpModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h4><i class="fas fa-upload"></i> Uploading Files</h4>
+                    <ul>
+                        <li>Drag & drop files or click "Browse Files"</li>
+                        <li>Maximum file size: <strong>500MB</strong></li>
+                        <li>Supported types: PDF, DWG, DXF, Images, ZIP, Excel, Word</li>
+                        <li>Add descriptions and tags for better organization</li>
+                        <li>Arabic filenames are fully supported</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4><i class="fas fa-history"></i> File Versions</h4>
+                    <ul>
+                        <li>Upload same filename to create new version automatically</li>
+                        <li>View all versions using the <i class="fas fa-history"></i> button</li>
+                        <li>Download any specific version</li>
+                        <li>Version history includes timestamps and descriptions</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4><i class="fas fa-search"></i> Finding Files</h4>
+                    <ul>
+                        <li>Search by filename, description, or tags</li>
+                        <li>Filter by file type and size</li>
+                        <li>Sort by name, date, or size</li>
+                        <li>Switch between grid and list views</li>
+                        <li>Real-time search as you type</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4><i class="fas fa-eye"></i> File Preview</h4>
+                    <ul>
+                        <li>Click the <i class="fas fa-eye"></i> button to preview files</li>
+                        <li>Supports: PDFs, Images, Text files</li>
+                        <li>CAD files show information and download suggestions</li>
+                        <li>Zoom, pan, and fullscreen controls available</li>
+                    </ul>
+                </div>
+                
+                <div class="help-section">
+                    <h4><i class="fas fa-info-circle"></i> Platform Info</h4>
+                    <ul>
+                        <li>Secure cloud storage with Supabase</li>
+                        <li>Automatic backup and version control</li>
+                        <li>Dark/light theme toggle available</li>
+                        <li>Mobile-responsive design</li>
+                        <li>Built specifically for construction professionals</li>
+                    </ul>
                 </div>
             </div>
         </div>
