@@ -901,7 +901,14 @@ class FileManager {
                 throw new Error('Failed to update metadata');
             }
 
-            console.log('✅ Metadata update response:', await response.text());
+            const result = await response.json();
+            console.log('✅ Metadata update response:', result);
+            
+            // Show detailed debug info
+            if (result.debug) {
+                console.log('🔧 Server debug info:', result.debug);
+            }
+            
             this.showNotification('Metadata updated successfully', 'success');
             
             // Add a small delay to ensure database is updated before refresh

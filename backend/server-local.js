@@ -481,7 +481,16 @@ app.put('/api/files/:fileId/metadata', async (req, res) => {
         // Update metadata in Supabase
         const updateResult = await supabaseService.updateFileMetadata(fileId, description, tags);
         
-        res.json({ success: true, message: 'Metadata updated successfully' });
+        res.json({ 
+            success: true, 
+            message: 'Metadata updated successfully',
+            debug: {
+                fileId,
+                description,
+                tags,
+                updateResult
+            }
+        });
         
     } catch (error) {
         console.error('Update metadata error:', error);

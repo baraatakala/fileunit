@@ -273,7 +273,11 @@ class SupabaseFileService {
                     baseName: baseName,
                     isLatest: index === 0,
                     
-                    // Keep Supabase fields too
+                    // Convert tags array back to comma-separated string for frontend
+                    description: file.description,
+                    tags: file.tags ? file.tags.join(', ') : null,
+                    
+                    // Keep other Supabase fields
                     ...file,
                     public_url: publicUrl
                 };
@@ -308,11 +312,18 @@ class SupabaseFileService {
             
             console.log(`🔧 Found existing record:`, existingRecord);
             
+            // Process tags: convert string to array for text[] column
+            let tagsArray = null;
+            if (tags && tags.trim()) {
+                // Split tags by comma and clean them
+                tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            }
+            
             const { data, error } = await this.supabase
                 .from('files')
                 .update({
-                    description: description || '',
-                    tags: tags || ''
+                    description: description || null,
+                    tags: tagsArray
                 })
                 .eq('id', fileId)
                 .select(); // Return updated data
