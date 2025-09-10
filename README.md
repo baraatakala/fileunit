@@ -1,376 +1,495 @@
-# 🏗️ Construction File Sharing Platform
+# 🏗️ FileUnit - Construction File Sharing Platform
 
-A professional file-sharing platform designed specifically for construction companies. Upload, manage, and share large files like AutoCAD drawings (.dwg), PDFs, and other construction documents with automatic version control.
+[![Platform Status](https://img.shields.io/badge/Status-Production%20Ready-success)](https://github.com/baraatakala/fileunit)
+[![Node Version](https://img.shields.io/badge/Node.js-v14+-blue)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Supabase](https://img.shields.io/badge/Database-Supabase-green)](https://supabase.com/)
+[![Deployments](https://img.shields.io/badge/Deployments-32-brightgreen)](https://github.com/baraatakala/fileunit/deployments)
 
-![Platform Status](https://img.shields.io/badge/Status-Production%20Ready-success)
-![Node Version](https://img.shields.io/badge/Node.js-v14+-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+A modern, professional file-sharing platform designed specifically for construction companies and professionals. Upload, manage, and share large technical files including AutoCAD drawings (.dwg), PDFs, and construction documents with **automatic version control** and **Supabase cloud storage**.
 
-## 🎯 **Features**
+## 🌟 What's New
 
-### 📁 **File Management**
-- **Large File Support**: Upload files up to 500MB (AutoCAD .dwg, PDF, images, etc.)
+- ✅ **Supabase Integration** - Cloud storage with PostgreSQL database
+- ✅ **Dark/Light Theme Toggle** - Enhanced user experience
+- ✅ **Enhanced Version Control** - Advanced file versioning system
+- ✅ **Improved Security** - Content Security Policy and rate limiting
+- ✅ **Mobile Responsive** - Optimized for all devices
+- ✅ **Real-time File Status** - Live upload progress and storage monitoring
+
+## 🎯 Key Features
+
+### 📁 Advanced File Management
+- **Large File Support**: Upload files up to **500MB** (AutoCAD .dwg, PDF, images, etc.)
 - **Multiple File Types**: PDF, DWG, DXF, JPG, PNG, ZIP, DOC, DOCX, TXT
-- **Drag & Drop Interface**: Modern, intuitive file upload
+- **Drag & Drop Interface**: Modern, intuitive file upload experience
 - **Batch Upload**: Upload multiple files simultaneously
+- **File Preview**: Quick preview for supported file types
 
-### 🔄 **Version Control**
-- **Automatic Version Tracking**: Keep track of file versions when updated
-- **Version History**: View and download any previous version
-- **Latest Version Highlighting**: Clear indication of current version
+### 🔄 Intelligent Version Control
+- **Automatic Version Tracking**: Smart version detection when same filename uploaded
+- **Version History**: Complete history with timestamps and descriptions
 - **Version Comparison**: Easy access to all file revisions
+- **Rollback Capability**: Restore any previous version instantly
+- **Version Metadata**: Track descriptions and tags across versions
 
-### 🔍 **Organization & Search**
-- **Smart Search**: Real-time search by filename, description, or tags
-- **Tag System**: Organize files with custom tags (blueprints, structural, electrical)
-- **File Descriptions**: Add context and details to uploads
-- **Date Sorting**: Files organized by upload date
+### 🔍 Smart Organization & Search
+- **Real-time Search**: Instant search by filename, description, or tags
+- **Advanced Tagging**: Organize with custom tags (blueprints, structural, electrical)
+- **Rich Descriptions**: Add detailed context to uploads
+- **Smart Sorting**: Multiple sorting options (date, size, name, type)
+- **Grid/List Views**: Switch between viewing modes
 
-### 🛡️ **Security & Performance**
-- **Content Security Policy**: Protection against XSS attacks
+### 🛡️ Enterprise-Grade Security
+- **Supabase Cloud Storage**: Secure, scalable cloud infrastructure
+- **Content Security Policy**: Protection against XSS and injection attacks
 - **Rate Limiting**: DDoS protection (100 requests per 15 minutes)
-- **File Validation**: Type and size checking
-- **Secure Storage**: UUID-based file naming for security
+- **File Validation**: Comprehensive type and size checking
+- **UUID-based Naming**: Secure file identification system
+- **Environment Protection**: Secure configuration management
 
-## 🚀 **Quick Start**
+### 🎨 Modern User Experience
+- **Dark/Light Theme**: Toggle between themes for comfortable viewing
+- **Responsive Design**: Perfect on desktop, tablet, and mobile
+- **Progressive Web App**: Install as desktop application
+- **Real-time Feedback**: Live progress indicators and status updates
+- **Accessibility**: WCAG compliant interface
 
-### **Prerequisites**
-- Node.js (v14 or higher)
-- Git (optional, for development)
+## 🚀 Quick Start
 
-### **Installation**
+### Prerequisites
+- **Node.js** (v14 or higher) - [Download](https://nodejs.org/)
+- **Supabase Account** (free tier available) - [Sign up](https://supabase.com/)
+- **Git** (optional, for development)
+
+### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/baraatakala/file-tracking.git
-   cd file-tracking
+   git clone https://github.com/baraatakala/fileunit.git
+   cd fileunit
    ```
 
 2. **Install dependencies**
    ```bash
    npm run setup
+   # or
+   npm install
    ```
 
-3. **Start the server**
+3. **Configure Supabase** (Choose one method)
    
-   **Option A: Using PowerShell Script (Windows)**
+   **Option A: Quick Setup Script (Windows)**
+   ```powershell
+   .\deploy-supabase.ps1
+   ```
+   
+   **Option B: Manual Setup**
+   ```bash
+   # Copy environment template
+   cp .env.example .env
+   
+   # Edit .env with your Supabase details
+   # Get these from your Supabase dashboard
+   ```
+
+4. **Start the platform**
+   
+   **Option A: Simple Start (Windows)**
    ```powershell
    .\start-local-simple.ps1
    ```
    
-   **Option B: Using npm**
+   **Option B: Standard Start**
    ```bash
    npm start
    ```
-
-4. **Access the platform**
+   
+   **Option C: Development Mode**
+   ```bash
+   npm run dev
    ```
-   Open browser: http://localhost:3000
+
+5. **Access your platform**
+   ```
+   🌐 Open browser: http://localhost:3000
    ```
 
-## 📋 **Usage Guide**
+## 📖 Usage Guide
 
-### **Uploading Files**
+### 🔄 First-Time Setup
+1. **Create Supabase Project**: Visit [Supabase Dashboard](https://app.supabase.com/)
+2. **Get Credentials**: Copy your Project URL and API Key
+3. **Update Environment**: Add credentials to `.env` file
+4. **Initialize Database**: Run setup script or use provided SQL scripts
+
+### 📤 Uploading Files
 1. **Drag & Drop**: Simply drag files into the upload zone
-2. **Browse**: Click "Browse Files" to select files
-3. **Add Details**: Optionally add description and tags
-4. **Upload**: Click the green "Upload Files" button
+2. **Browse Files**: Click "Browse Files" to select manually
+3. **Add Metadata**: 
+   - Description (optional, up to 500 characters)
+   - Tags (optional, comma-separated)
+4. **Upload**: Click "Upload Files" button
+5. **Monitor Progress**: Watch real-time upload progress
 
-### **Managing Files**
-- **Download**: Click the green download button
-- **View Versions**: Click orange "Versions" button to see all versions
-- **Delete**: Click red delete button (with confirmation)
-- **Search**: Use the search box to find files quickly
+### 🗂️ Managing Files
+- **📥 Download**: Click green download button
+- **📋 View Versions**: Click "Versions" to see complete history
+- **🗑️ Delete**: Remove files (with confirmation dialog)
+- **🔍 Search**: Use search bar for instant file finding
+- **👁️ Preview**: Quick preview for supported formats
+- **🏷️ Filter by Tags**: Click tags to filter files
 
-### **Version Control**
-- Upload same filename → Automatic new version created
-- All previous versions preserved and accessible
-- Download any version individually
+### 🎨 Customization
+- **🌙 Theme Toggle**: Switch between dark and light themes
+- **📊 View Options**: Toggle between grid and list views
+- **📈 Statistics**: Monitor storage usage and file counts
 
-## 🏗️ **Perfect For Construction Industry**
+## 🏗️ Perfect for Construction Industry
 
-### **Supported Construction Files**
-- **📐 AutoCAD Drawings**: .dwg, .dxf files (up to 500MB)
-- **📋 Plans & Specs**: PDF documents, specifications
-- **📷 Site Photos**: Progress photos, inspections
-- **📄 Documentation**: Contracts, reports, correspondence
-- **📦 Archives**: Compressed project files
+### Supported Construction Files
+- **📐 CAD Files**: `.dwg`, `.dxf` (AutoCAD drawings, up to 500MB)
+- **📋 Documentation**: PDF plans, specifications, contracts
+- **📷 Site Media**: Progress photos, inspection images
+- **📄 Reports**: Word documents, text files
+- **📦 Archives**: ZIP files with multiple documents
+- **📊 Spreadsheets**: Project data, calculations
 
-## 🔧 **Technical Specifications**
+### Industry-Specific Features
+- **Large File Handling**: Optimized for CAD files and high-res images
+- **Version Control**: Critical for drawing revisions and updates
+- **Team Collaboration**: Shared access with description and tagging
+- **Mobile Access**: Site managers can access files on tablets/phones
+- **Secure Sharing**: Professional-grade security for sensitive documents
 
-### **Backend (Node.js)**
-- **Framework**: Express.js
-- **File Upload**: Multer middleware
-- **Security**: Helmet.js, CORS, Rate limiting
-- **Storage**: Local filesystem
-- **Database**: In-memory (upgradeable)
+## 🔧 Technical Architecture
 
-### **Frontend**
-- **Technologies**: HTML5, CSS3, Vanilla JavaScript
-- **UI Framework**: Custom responsive design
-- **Icons**: Font Awesome 6
-- **File Handling**: Advanced drag-drop interface
+### Backend Stack
+- **🟢 Node.js**: High-performance JavaScript runtime
+- **⚡ Express.js**: Fast, minimalist web framework
+- **🔒 Helmet.js**: Security middleware
+- **📦 Multer**: File upload handling
+- **🗄️ Supabase**: PostgreSQL database + storage
+- **🛡️ CORS**: Cross-origin request handling
+- **⏱️ Rate Limiting**: Built-in DDoS protection
 
-## 🤝 **Contributing**
+### Frontend Stack
+- **🌐 HTML5**: Semantic, accessible markup
+- **🎨 CSS3**: Modern styling with Grid and Flexbox
+- **⚡ Vanilla JavaScript**: No framework dependencies
+- **📱 Responsive Design**: Mobile-first approach
+- **🎭 Font Awesome 6**: Professional icon library
+- **🌙 Theme System**: Dynamic dark/light mode switching
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Cloud Infrastructure
+- **☁️ Supabase**: 
+  - PostgreSQL database
+  - File storage buckets
+  - Real-time subscriptions
+  - Built-in authentication ready
+- **🚀 Multiple Deployment Options**:
+  - Render.com
+  - Railway
+  - Heroku
+  - VPS/Custom hosting
 
-## 📝 **License**
+## 📁 Project Structure
 
-This project is licensed under the MIT License.
-
----
-
-**Built with ❤️ for the construction industry**
-
-```javascript
-// Firebase Storage Rules
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null || true; // For now, allow all writes
-    }
-  }
-}
+```
+fileunit/
+├── 📂 backend/
+│   ├── 🟢 server.js              # Main server file
+│   ├── 🟢 server-local.js        # Local development server
+│   ├── 📦 package.json           # Backend dependencies
+│   └── ⚙️ .env                   # Environment variables
+├── 📂 frontend/
+│   ├── 🌐 index.html            # Main application
+│   ├── 🎨 style.css             # Responsive styling
+│   └── ⚡ script.js             # Application logic
+├── 📂 config/
+│   ├── 🔧 supabase-config.js    # Database configuration
+│   └── ⚙️ environment setup     # Various config files
+├── 📂 database/
+│   ├── 🗃️ schema.sql            # Database schema
+│   └── 📊 migrations/           # Database migrations
+├── 📂 deployment/
+│   ├── 🚀 render.yaml           # Render deployment
+│   ├── 🐳 Procfile              # Heroku deployment
+│   └── 📜 Various deploy scripts
+└── 📋 README.md                 # This documentation
 ```
 
-#### Firestore Rules:
-```javascript
-// Firestore Rules
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true; // For development - tighten in production
-    }
-  }
-}
-```
+## ⚙️ Configuration
 
-### 3. Environment Configuration
-
+### Environment Variables
 ```bash
-# Copy environment template
-cd backend
-cp .env.template .env
-
-# Edit .env with your Firebase details
-# Replace 'your-project-id' with your actual Firebase project ID
-```
-
-Update the `.env` file:
-```env
+# Server Configuration
 PORT=3000
-FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-FIREBASE_PROJECT_ID=your-project-id
 NODE_ENV=development
-```
 
-### 4. Start the Application
+# Supabase Configuration
+SUPABASE_URL=your-project-url
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-```bash
-# From the backend directory
-npm start
-
-# Or for development with auto-reload
-npm run dev
-```
-
-The application will be available at: `http://localhost:3000`
-
-## 📖 Usage
-
-### Uploading Files
-
-1. **Drag & Drop**: Drag files directly onto the upload zone
-2. **Browse**: Click "Browse Files" to select files
-3. **Add Details**: Optionally add description and tags
-4. **Upload**: Click "Upload Files"
-
-### Managing Files
-
-- **Download**: Click the download button on any file
-- **View Versions**: Click "Versions" to see all versions of a file
-- **Delete**: Remove files you no longer need
-- **Search**: Use the search bar to find specific files
-
-### Supported File Types
-
-- **CAD Files**: .dwg, .dxf
-- **Documents**: .pdf, .doc, .docx, .txt
-- **Images**: .jpg, .jpeg, .png
-- **Archives**: .zip
-- **Maximum Size**: 500MB per file
-
-## 🏗️ Project Structure
-
-```
-file-sharing-platform/
-├── backend/
-│   ├── server.js          # Main server file
-│   ├── package.json       # Backend dependencies
-│   └── .env              # Environment variables
-├── frontend/
-│   ├── index.html        # Main HTML file
-│   ├── style.css         # Styling
-│   └── script.js         # Frontend JavaScript
-├── config/
-│   └── firebase-service-account.json  # Firebase credentials
-└── README.md             # This file
-```
-
-## 🔧 Configuration
-
-### File Size Limits
-Edit `MAX_FILE_SIZE` in `.env` (in bytes):
-```env
+# File Upload Limits
 MAX_FILE_SIZE=524288000  # 500MB
-```
-
-### Allowed File Types
-Edit `ALLOWED_EXTENSIONS` in `.env`:
-```env
 ALLOWED_EXTENSIONS=pdf,dwg,dxf,jpg,jpeg,png,zip,doc,docx,txt
+
+# Security
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=900000  # 15 minutes
 ```
 
-### Port Configuration
-```env
-PORT=3000  # Change to your preferred port
-```
-
-## 🛡️ Security Considerations
-
-### For Production:
-
-1. **Authentication**: Add user authentication
-2. **Authorization**: Implement role-based access
-3. **File Validation**: Add virus scanning
-4. **Rate Limiting**: Already included, adjust as needed
-5. **HTTPS**: Use SSL certificates
-6. **Environment Variables**: Use secure environment management
-
-### Firebase Security Rules:
-Update Firebase rules for production:
-
+### File Size & Type Limits
 ```javascript
-// Production Storage Rules
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read: if true; // Adjust based on your needs
-      allow write: if request.auth != null; // Require authentication
-    }
-  }
-}
+// Customize in backend/server.js
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+const ALLOWED_TYPES = [
+  'application/pdf',        // PDF
+  'image/vnd.dwg',         // AutoCAD DWG
+  'image/vnd.dxf',         // AutoCAD DXF
+  'image/jpeg',            // JPEG images
+  'image/png',             // PNG images
+  'application/zip',       // ZIP archives
+  // ... more types
+];
 ```
 
-## 🚀 Deployment
+## 🚀 Deployment Options
 
-### Option 1: Deploy to Heroku
-
-1. Install Heroku CLI
-2. Create Heroku app
-3. Set environment variables
-4. Deploy:
-
+### Option 1: Deploy to Render (Recommended)
 ```bash
-# From project root
-git init
-git add .
-git commit -m "Initial commit"
-heroku create your-app-name
-git push heroku main
+# Connect your GitHub repo to Render
+# Set environment variables in Render dashboard
+# Deploy automatically on push
 ```
 
 ### Option 2: Deploy to Railway
+```bash
+# Connect GitHub repository
+# Set environment variables
+# Deploy with zero configuration
+```
 
-1. Connect your GitHub repository to Railway
-2. Set environment variables
-3. Deploy automatically
+### Option 3: Deploy to Heroku
+```bash
+# Install Heroku CLI
+heroku create your-app-name
+heroku config:set SUPABASE_URL=your-url
+heroku config:set SUPABASE_ANON_KEY=your-key
+git push heroku main
+```
 
-### Option 3: Deploy to VPS
+### Option 4: VPS/Custom Server
+```bash
+# Upload files to server
+# Install Node.js and dependencies
+# Use PM2 for process management
+# Configure nginx reverse proxy
+# Set up SSL certificates
+```
 
-1. Upload project to your server
-2. Install Node.js and dependencies
-3. Use PM2 for process management
-4. Configure nginx as reverse proxy
+## 🛡️ Security & Production Considerations
 
-## 📊 Monitoring
+### Security Checklist
+- ✅ **Environment Variables**: All secrets in `.env` files
+- ✅ **Rate Limiting**: 100 requests per 15 minutes per IP
+- ✅ **File Validation**: Type, size, and content checking
+- ✅ **CSP Headers**: Prevents XSS attacks
+- ✅ **CORS Configuration**: Controlled cross-origin access
+- ✅ **Supabase RLS**: Row-level security policies
+- 🔄 **Authentication**: Ready for implementation
+- 🔄 **Authorization**: Role-based access control ready
 
-Check application health:
-- Health endpoint: `GET /api/health`
-- Monitor Firebase usage in Firebase Console
-- Check server logs for errors
+### Production Hardening
+```javascript
+// Additional security for production
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    }
+  }
+}));
+```
 
-## 🤝 Contributing
+## 📊 Monitoring & Analytics
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+### Health Monitoring
+```bash
+# Check application health
+curl http://localhost:3000/api/health
 
-## 📄 License
+# Monitor file upload endpoint
+curl http://localhost:3000/api/files
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+# Check Supabase connection
+curl http://localhost:3000/api/test-connection
+```
+
+### Key Metrics to Track
+- 📈 **Upload Success Rate**: Monitor failed uploads
+- 📊 **Storage Usage**: Track Supabase storage consumption
+- ⚡ **Response Times**: API endpoint performance
+- 👥 **User Activity**: File views and downloads
+- 🚨 **Error Rates**: Track and resolve issues
 
 ## 🆘 Troubleshooting
 
-### Common Issues:
+### Common Issues & Solutions
 
-#### Firebase Connection Error
-- Verify your `firebase-service-account.json` is correctly placed
-- Check that Firebase Storage and Firestore are enabled
-- Ensure your project ID matches in all configuration files
-
-#### Upload Fails
-- Check file size (max 500MB)
-- Verify file type is supported
-- Check Firebase Storage quotas
-- Review server logs for detailed errors
-
-#### Files Don't Load
-- Check Firestore rules allow read access
-- Verify Firebase project configuration
-- Check browser console for JavaScript errors
-
-#### Port Already in Use
+#### ❌ Supabase Connection Error
 ```bash
-# Find and kill process using port 3000
+# Check your environment variables
+cat .env | grep SUPABASE
+
+# Test connection
+node -e "console.log(process.env.SUPABASE_URL)"
+
+# Verify Supabase project is active
+# Check Supabase dashboard for service status
+```
+
+#### ❌ File Upload Fails
+```bash
+# Check file size (max 500MB)
+# Verify file type is supported
+# Check Supabase storage bucket policies
+# Review server logs: npm run dev
+
+# Check storage quota in Supabase dashboard
+# Verify bucket permissions
+```
+
+#### ❌ Files Don't Display
+```bash
+# Check browser console for errors (F12)
+# Verify Supabase configuration
+# Check file permissions in bucket
+# Review network tab for API failures
+```
+
+#### ❌ Port Already in Use
+```powershell
+# Windows - Find and kill process
 netstat -ano | findstr :3000
 taskkill /PID <process_id> /F
 
-# Or use a different port
-PORT=3001 npm start
+# Or use different port
+$env:PORT=3001; npm start
 ```
 
-### Getting Help
+### Getting Expert Help
+1. 📖 **Check Documentation**: Review setup guides in `/docs`
+2. 🔍 **Review Logs**: Enable debug mode with `DEBUG=*`
+3. 🌐 **Supabase Dashboard**: Monitor database and storage
+4. 🐛 **Browser DevTools**: Check console and network tabs
+5. 📧 **Create Issue**: Use GitHub Issues for bug reports
 
-- Check Firebase Console for quota and error information
-- Review browser developer tools console
-- Check server logs for detailed error messages
-- Ensure all environment variables are correctly set
+## 🔮 Roadmap & Future Enhancements
 
-## 🔮 Future Enhancements
+### Version 2.0 (In Development)
+- 🔐 **User Authentication**: Full user management system
+- 👥 **Team Collaboration**: Project-based file organization
+- 💬 **File Comments**: Collaborative annotations
+- 🔔 **Real-time Notifications**: File updates and shares
+- 📱 **Mobile App**: Native iOS/Android applications
 
-- User authentication and authorization
-- File sharing with expiration dates
-- Collaborative comments on files
-- Project-based file organization
-- Integration with construction management tools
-- Mobile app development
-- Advanced search and filtering
-- File preview capabilities
+### Version 2.1 (Planned)
+- 🔗 **File Sharing Links**: Secure, expiring share URLs
+- 🔍 **Advanced Search**: Full-text search and filters
+- 📊 **Analytics Dashboard**: Usage statistics and insights
+- 🔌 **API Integration**: Connect with construction management tools
+- 🎯 **Project Templates**: Pre-configured project structures
+
+### Version 3.0 (Future Vision)
+- 🤖 **AI-Powered Features**: Smart file categorization
+- 🔄 **Sync Capabilities**: Desktop app synchronization
+- 🌍 **Multi-language Support**: Internationalization
+- 📐 **CAD File Preview**: In-browser DWG/DXF viewing
+- ☁️ **Multi-cloud Support**: AWS S3, Google Cloud integration
+
+## 🤝 Contributing
+
+We welcome contributions from the construction and development communities!
+
+### How to Contribute
+1. 🍴 **Fork** the repository
+2. 🌿 **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. ✍️ **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. 📤 **Push** to the branch (`git push origin feature/amazing-feature`)
+5. 🔀 **Open** a Pull Request
+
+### Development Setup
+```bash
+# Clone your fork
+git clone https://github.com/your-username/fileunit.git
+cd fileunit
+
+# Install dependencies
+npm install
+
+# Set up development environment
+cp .env.example .env
+# Edit .env with your development Supabase credentials
+
+# Start development server
+npm run dev
+```
+
+### Contribution Guidelines
+- ✅ Follow existing code style and patterns
+- ✅ Add tests for new features
+- ✅ Update documentation for changes
+- ✅ Test on multiple browsers and devices
+- ✅ Ensure mobile responsiveness
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+### MIT License Summary
+- ✅ **Commercial Use**: Use in commercial projects
+- ✅ **Modification**: Modify and distribute
+- ✅ **Distribution**: Share with others
+- ✅ **Private Use**: Use in private projects
+- ❗ **Liability**: No warranty provided
+- ❗ **Attribution**: Must include license notice
+
+## 🏆 Acknowledgments
+
+- 🎨 **Font Awesome**: Beautiful, consistent icons
+- ☁️ **Supabase**: Powerful backend-as-a-service
+- 🟢 **Node.js Community**: Excellent ecosystem
+- 🏗️ **Construction Industry**: For inspiring this solution
+- 👥 **Contributors**: Everyone who helped build this platform
+
+## 📞 Support & Contact
+
+### Get Help
+- 📚 **Documentation**: Comprehensive guides in repository
+- 🐛 **Bug Reports**: [Create an Issue](https://github.com/baraatakala/fileunit/issues)
+- 💡 **Feature Requests**: [Discussion Board](https://github.com/baraatakala/fileunit/discussions)
+- ⭐ **Star the Project**: Show your support!
+
+### Professional Services
+Looking for custom development, enterprise deployment, or consulting services? Contact the development team for professional support.
 
 ---
 
-**Built for Construction Professionals** 🏗️
+<div align="center">
 
-This platform is designed specifically for the construction industry's unique needs for sharing large technical files with reliable version control.
+**Built with ❤️ for Construction Professionals 🏗️**
+
+*FileUnit is designed specifically for the construction industry's unique needs for sharing large technical files with reliable version control and cloud storage.*
+
+[![GitHub stars](https://img.shields.io/github/stars/baraatakala/fileunit?style=social)](https://github.com/baraatakala/fileunit/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/baraatakala/fileunit?style=social)](https://github.com/baraatakala/fileunit/network)
+
+[⭐ Star this project](https://github.com/baraatakala/fileunit) • [🐛 Report Bug](https://github.com/baraatakala/fileunit/issues) • [💡 Request Feature](https://github.com/baraatakala/fileunit/discussions)
+
+</div>
