@@ -334,6 +334,93 @@ app.delete('/api/files/:fileId', (req, res) => {
     }
 });
 
+// Rollback file to a previous version
+app.post('/api/files/rollback/:fileId', (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const { targetVersion, filename } = req.body;
+        
+        console.log('🔄 Rollback request:', {
+            fileId,
+            targetVersion,
+            filename
+        });
+        
+        if (!targetVersion) {
+            console.error('❌ Missing target version');
+            return res.status(400).json({ error: 'Target version is required' });
+        }
+        
+        // Find the file in the database
+        const file = fileDatabase.find(f => f.id === fileId);
+        if (!file) {
+            console.error('❌ File not found:', fileId);
+            return res.status(404).json({ error: 'File not found' });
+        }
+        
+        console.log('✅ Found file:', file.originalName);
+        
+        // Find the target version
+        const targetVersionFile = file.versions?.find(v => v.version === parseInt(targetVersion));
+        if (!targetVersionFile) {
+            console.error('❌ Target version not found:', targetVersion);
+            return res.status(404).json({ error: 'Target version not found' });
+        }
+        
+        if (file.version === parseInt(targetVersion)) {
+            console.error('❌ Already at target version');
+            return res.status(400).json({ error: 'Cannot rollback to current version' });
+        }
+        
+        console.log('🎯 Rolling back from v' + file.version + ' to v' + targetVersion);
+        
+        // Create a backup of current version before rollback
+        const currentVersionBackup = {
+            version: file.version,
+            filename: file.filename,
+            originalName: file.originalName,
+            size: file.size,
+            uploadedAt: file.uploadedAt,
+            description: file.description,
+            tags: file.tags
+        };
+        
+        // Update main file properties to target version
+        file.version = targetVersionFile.version;
+        file.filename = targetVersionFile.filename;
+        file.originalName = targetVersionFile.originalName;
+        file.size = targetVersionFile.size;
+        file.uploadedAt = new Date().toISOString(); // Update timestamp for rollback
+        file.description = targetVersionFile.description || file.description;
+        file.tags = targetVersionFile.tags || file.tags;
+        
+        // Add current version to versions array (if not already there)
+        if (!file.versions) {
+            file.versions = [];
+        }
+        
+        // Remove the target version from versions array and add current as version
+        file.versions = file.versions.filter(v => v.version !== parseInt(targetVersion));
+        file.versions.push(currentVersionBackup);
+        
+        // Sort versions by version number
+        file.versions.sort((a, b) => b.version - a.version);
+        
+        console.log('✅ Rollback completed successfully');
+        
+        res.json({ 
+            success: true, 
+            message: `Successfully rolled back "${filename}" to version ${targetVersion}`,
+            newLatestVersion: targetVersion,
+            previousLatestVersion: currentVersionBackup.version
+        });
+        
+    } catch (error) {
+        console.error('❌ Rollback error:', error);
+        res.status(500).json({ error: 'Rollback failed', details: error.message });
+    }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 

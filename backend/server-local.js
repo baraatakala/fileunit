@@ -504,15 +504,27 @@ app.post('/api/files/rollback/:fileId', async (req, res) => {
         // Get all current versions of this file
         const baseName = targetFile.base_name;
         console.log('📋 Fetching all versions for base_name:', baseName);
+        
+        // Handle case where base_name might be null/undefined - use filename as fallback
+        const searchCriteria = baseName || targetFile.filename || targetFile.original_name;
+        const searchField = baseName ? 'base_name' : 'filename';
+        
+        console.log('🔍 Using search criteria:', searchField, '=', searchCriteria);
+        
         const { data: allVersions, error: versionsError } = await supabaseService.supabase
             .from('files')
             .select('*')
-            .eq('base_name', baseName)
+            .eq(searchField, searchCriteria)
             .order('version', { ascending: false });
 
         if (versionsError) {
             console.error('❌ Error fetching versions:', versionsError);
             return res.status(500).json({ error: 'Failed to fetch file versions', details: versionsError.message });
+        }
+
+        if (!allVersions || allVersions.length === 0) {
+            console.error('❌ No versions found for:', searchField, '=', searchCriteria);
+            return res.status(404).json({ error: 'No file versions found' });
         }
 
         console.log('📊 Found versions:', allVersions?.length, 'versions');
