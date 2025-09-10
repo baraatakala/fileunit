@@ -703,9 +703,6 @@ class FileManager {
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
-                        <button class="action-btn edit-btn" onclick="fileManager.editVersionMeta('${version.fileId}', '${baseName}')" title="Edit description & tags">
-                            <i class="fas fa-edit"></i>
-                        </button>
                         <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')" title="Download this version">
                             <i class="fas fa-download"></i>
                         </button>

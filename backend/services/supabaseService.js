@@ -6,13 +6,14 @@ class SupabaseFileService {
         require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
         
         this.supabaseUrl = process.env.SUPABASE_URL || 'https://vdyuepooqnkwyxnjncva.supabase.co';
-        this.supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkeXVlcG9vcW5rd3l4bmpuY3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjY3NDQsImV4cCI6MjA3Mjc0Mjc0NH0.Vq71PYlP5x9KYYdPjCSmYUjp-5mCTaYhJAYdAeZXcNw';
+        this.supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkeXVlcG9vcW5rd3l4bmpuY3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjY3NDQsImV4cCI6MjA3Mjc0Mjc0NH0.Vq71PYlP5x9KYYdPjCSmYUjp-5mCTaYhJAYdAeZXcNw';
         this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
         this.bucketName = process.env.STORAGE_BUCKET || 'construction-files';
         
         // Debug logging
         console.log('🔧 SupabaseService initialized with:');
         console.log('   URL:', this.supabaseUrl);
+        console.log('   Key Type:', process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_KEY' : 'ANON_KEY');
         console.log('   Key:', this.supabaseKey ? 'SET' : 'NOT SET');
         console.log('   Bucket:', this.bucketName);
     }
@@ -330,7 +331,13 @@ class SupabaseFileService {
 
             if (error) {
                 console.error('❌ Update metadata error:', error);
+                console.error('❌ Error details:', JSON.stringify(error, null, 2));
                 throw error;
+            }
+
+            if (!data || data.length === 0) {
+                console.error('❌ No data returned from update - record may not exist');
+                throw new Error('Update failed - no records updated');
             }
 
             console.log(`✅ Metadata updated successfully for file ${fileId}:`, data);
