@@ -1873,6 +1873,32 @@ class FileManager {
         
         return filename;
     }
+
+    // Show toast message to user
+    showMessage(message, type = 'info') {
+        // Remove any existing toast
+        const existingToast = document.querySelector('.toast-message');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast-message toast-${type}`;
+        toast.textContent = message;
+
+        // Add to page
+        document.body.appendChild(toast);
+
+        // Show with animation
+        setTimeout(() => toast.classList.add('show'), 100);
+
+        // Auto remove after 4 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
 }
 
 // Initialize the file manager when the page loads

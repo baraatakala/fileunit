@@ -474,13 +474,20 @@ app.post('/api/files/rollback/:fileId', async (req, res) => {
         const { fileId } = req.params;
         const { targetVersion, filename } = req.body;
         
-        console.log('Rolling back file:', filename, 'to version:', targetVersion);
+        console.log('🔄 Rollback request:', {
+            fileId,
+            targetVersion,
+            filename,
+            body: req.body
+        });
         
         if (!targetVersion) {
+            console.error('❌ Missing target version');
             return res.status(400).json({ error: 'Target version is required' });
         }
         
         // Get the target version file details
+        console.log('📄 Fetching target file details for ID:', fileId);
         const { data: targetFile, error: fetchError } = await supabaseService.supabase
             .from('files')
             .select('*')
@@ -488,12 +495,15 @@ app.post('/api/files/rollback/:fileId', async (req, res) => {
             .single();
 
         if (fetchError || !targetFile) {
-            console.error('Target file not found:', fetchError);
-            return res.status(404).json({ error: 'Target version not found' });
+            console.error('❌ Target file not found:', fetchError);
+            return res.status(404).json({ error: 'Target version not found', details: fetchError?.message });
         }
+        
+        console.log('✅ Found target file:', targetFile.filename, 'base_name:', targetFile.base_name);
         
         // Get all current versions of this file
         const baseName = targetFile.base_name;
+        console.log('📋 Fetching all versions for base_name:', baseName);
         const { data: allVersions, error: versionsError } = await supabaseService.supabase
             .from('files')
             .select('*')
@@ -501,21 +511,28 @@ app.post('/api/files/rollback/:fileId', async (req, res) => {
             .order('version', { ascending: false });
 
         if (versionsError) {
-            console.error('Error fetching versions:', versionsError);
-            return res.status(500).json({ error: 'Failed to fetch file versions' });
+            console.error('❌ Error fetching versions:', versionsError);
+            return res.status(500).json({ error: 'Failed to fetch file versions', details: versionsError.message });
         }
+
+        console.log('📊 Found versions:', allVersions?.length, 'versions');
+        allVersions?.forEach(v => console.log(`  - v${v.version} (${v.is_latest ? 'Latest' : 'Old'})`));
 
         // Find current latest version
         const currentLatest = allVersions.find(v => v.is_latest === true);
         const targetVersionFile = allVersions.find(v => v.version === targetVersion);
 
         if (!targetVersionFile) {
+            console.error('❌ Target version not found in versions list');
             return res.status(404).json({ error: 'Target version not found' });
         }
 
         if (targetVersionFile.is_latest) {
+            console.error('❌ Attempting to rollback to current version');
             return res.status(400).json({ error: 'Cannot rollback to current version' });
         }
+
+        console.log('🎯 Rolling back from v' + (currentLatest?.version || 'unknown') + ' to v' + targetVersion);
 
         // Start transaction-like operations
         const updates = [];
