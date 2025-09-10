@@ -478,6 +478,11 @@ app.put('/api/files/:fileId/metadata', async (req, res) => {
         console.log('New description:', description);
         console.log('New tags:', tags);
         
+        // Debug: Log the exact values being sent to Supabase
+        const tagsArray = tags && tags.trim() ? tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : null;
+        console.log('🔧 Tags array for database:', tagsArray);
+        console.log('🔧 Description for database:', description || null);
+        
         // Update metadata in Supabase
         const updateResult = await supabaseService.updateFileMetadata(fileId, description, tags);
         
@@ -495,6 +500,40 @@ app.put('/api/files/:fileId/metadata', async (req, res) => {
     } catch (error) {
         console.error('Update metadata error:', error);
         res.status(500).json({ error: 'Failed to update metadata', details: error.message });
+    }
+});
+
+// Test endpoint to directly update database
+app.post('/api/test-db-update/:fileId', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const { description, tags } = req.body;
+        
+        console.log('🧪 Testing direct database update for file:', fileId);
+        console.log('🧪 Test description:', description);
+        console.log('🧪 Test tags:', tags);
+        
+        // Direct supabase update
+        const { data, error } = await supabaseService.supabase
+            .from('files')
+            .update({
+                description: description,
+                tags: tags ? [tags] : null
+            })
+            .eq('id', fileId)
+            .select();
+            
+        if (error) {
+            console.error('❌ Direct database update error:', error);
+            return res.status(500).json({ error: 'Database update failed', details: error });
+        }
+        
+        console.log('✅ Direct database update success:', data);
+        res.json({ success: true, data });
+        
+    } catch (error) {
+        console.error('❌ Test endpoint error:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
