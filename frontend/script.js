@@ -669,12 +669,24 @@ class FileManager {
         versionsModal.classList.add('show');
 
         try {
+            console.log('🔍 Loading versions for:', baseName);
             const response = await fetch(`/api/files/${encodeURIComponent(baseName)}/versions`);
             if (!response.ok) {
                 throw new Error('Failed to load versions');
             }
 
             const versions = await response.json();
+            console.log('📄 Versions data received:', versions);
+            
+            // Debug: Log each version's metadata
+            versions.forEach(version => {
+                console.log(`📄 Version ${version.fileId}:`, {
+                    description: version.description,
+                    tags: version.tags,
+                    hasDescription: !!version.description,
+                    hasTags: !!version.tags
+                });
+            });
             
             versionsModalBody.innerHTML = versions.map(version => `
                 <div class="version-item" id="version-${version.fileId}">
@@ -870,6 +882,10 @@ class FileManager {
         const newTags = document.getElementById(`edit-tags-${fileId}`).value.trim();
 
         try {
+            console.log('🔄 Updating metadata for file:', fileId);
+            console.log('🔄 New description:', newDesc);
+            console.log('🔄 New tags:', newTags);
+            
             const response = await fetch(`/api/files/${fileId}/metadata`, {
                 method: 'PUT',
                 headers: {
@@ -885,8 +901,14 @@ class FileManager {
                 throw new Error('Failed to update metadata');
             }
 
+            console.log('✅ Metadata update response:', await response.text());
             this.showNotification('Metadata updated successfully', 'success');
+            
+            // Add a small delay to ensure database is updated before refresh
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             // Refresh the versions modal to show updated data
+            console.log('🔄 Refreshing versions modal...');
             await this.showVersions(baseName);
             
         } catch (error) {
