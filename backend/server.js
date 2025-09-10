@@ -263,6 +263,69 @@ app.delete('/api/files/:fileId', async (req, res) => {
   }
 });
 
+// Update file metadata (description and tags)
+app.put('/api/files/:fileId/metadata', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const { description, tags } = req.body;
+    
+    const fileDoc = await db.collection('files').doc(fileId).get();
+    
+    if (!fileDoc.exists) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Update metadata in Firestore
+    await db.collection('files').doc(fileId).update({
+      description: description || '',
+      tags: tags || '',
+      updatedAt: new Date().toISOString()
+    });
+    
+    res.json({ success: true, message: 'Metadata updated successfully' });
+    
+  } catch (error) {
+    console.error('Update metadata error:', error);
+    res.status(500).json({ error: 'Failed to update metadata' });
+  }
+});
+
+// Delete specific version
+app.delete('/api/files/:fileId/version', async (req, res) => {
+  try {
+    const { fileId } = req.params;
+    const fileDoc = await db.collection('files').doc(fileId).get();
+    
+    if (!fileDoc.exists) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    const fileData = fileDoc.data();
+    
+    // Don't allow deletion of latest version
+    if (fileData.isLatest) {
+      return res.status(400).json({ error: 'Cannot delete the latest version' });
+    }
+    
+    // Delete from Firebase Storage
+    try {
+      await bucket.file(fileData.filePath).delete();
+    } catch (storageError) {
+      console.error('Storage deletion error:', storageError);
+      // Continue with database deletion even if storage fails
+    }
+    
+    // Delete from Firestore
+    await db.collection('files').doc(fileId).delete();
+    
+    res.json({ success: true, message: 'Version deleted successfully' });
+    
+  } catch (error) {
+    console.error('Delete version error:', error);
+    res.status(500).json({ error: 'Failed to delete version' });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

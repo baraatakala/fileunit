@@ -286,6 +286,85 @@ class SupabaseFileService {
             throw error;
         }
     }
+
+    // Update file metadata (description and tags)
+    async updateFileMetadata(fileId, description, tags) {
+        try {
+            console.log(`Updating metadata for file ${fileId}`);
+            
+            const { data, error } = await this.supabase
+                .from('files')
+                .update({
+                    description: description || '',
+                    tags: tags || ''
+                })
+                .eq('id', fileId);
+
+            if (error) {
+                console.error('Update metadata error:', error);
+                throw error;
+            }
+
+            console.log(`Metadata updated successfully for file ${fileId}`);
+            return { success: true };
+
+        } catch (error) {
+            console.error('Update metadata service error:', error);
+            throw error;
+        }
+    }
+
+    // Delete specific version of a file
+    async deleteFileVersion(fileId) {
+        try {
+            console.log(`Deleting file version ${fileId}`);
+
+            // First get the file record to get the file path
+            const { data: fileRecord, error: fetchError } = await this.supabase
+                .from('files')
+                .select('file_path, filename')
+                .eq('id', fileId)
+                .single();
+
+            if (fetchError) {
+                console.error('Fetch file record error:', fetchError);
+                throw fetchError;
+            }
+
+            if (!fileRecord) {
+                throw new Error('File not found');
+            }
+
+            // Delete from storage
+            console.log(`Deleting from storage: ${fileRecord.file_path}`);
+            const { error: storageError } = await this.supabase.storage
+                .from(this.bucketName)
+                .remove([fileRecord.file_path]);
+
+            if (storageError) {
+                console.error('Storage deletion error:', storageError);
+                // Continue with database deletion even if storage fails
+            }
+
+            // Delete from database
+            const { error: dbError } = await this.supabase
+                .from('files')
+                .delete()
+                .eq('id', fileId);
+
+            if (dbError) {
+                console.error('Database deletion error:', dbError);
+                throw dbError;
+            }
+
+            console.log(`File version ${fileId} deleted successfully`);
+            return { success: true };
+
+        } catch (error) {
+            console.error('Delete file version service error:', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = SupabaseFileService;

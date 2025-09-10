@@ -272,76 +272,6 @@ class FileManager {
         this.handleFileSelect(files);
     }
 
-    // Enhanced file validation
-    validateFile(file) {
-        const maxSize = 500 * 1024 * 1024; // 500MB
-        const allowedTypes = [
-            // Documents
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'text/plain',
-            
-            // Images
-            'image/jpeg',
-            'image/jpg',
-            'image/png',
-            'image/gif',
-            'image/webp',
-            
-            // CAD Files
-            'application/acad',
-            'application/x-autocad',
-            'image/vnd.dwg',
-            'image/x-dwg',
-            'application/dwg',
-            'application/x-dwg',
-            'drawing/dwg',
-            'image/vnd.dxf',
-            'application/dxf',
-            
-            // Archives
-            'application/zip',
-            'application/x-rar-compressed',
-            'application/x-7z-compressed',
-            
-            // Spreadsheets
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            
-            // Presentations
-            'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-        ];
-
-        // Check file size
-        if (file.size > maxSize) {
-            this.showNotification(`File "${file.name}" is too large. Maximum size is 500MB.`, 'error');
-            return false;
-        }
-
-        // Check file type (also check extension for CAD files)
-        const fileName = file.name.toLowerCase();
-        const hasValidExtension = fileName.endsWith('.pdf') || fileName.endsWith('.dwg') || 
-                                fileName.endsWith('.dxf') || fileName.endsWith('.jpg') || 
-                                fileName.endsWith('.jpeg') || fileName.endsWith('.png') || 
-                                fileName.endsWith('.zip') || fileName.endsWith('.doc') || 
-                                fileName.endsWith('.docx') || fileName.endsWith('.txt') ||
-                                fileName.endsWith('.gif') || fileName.endsWith('.webp') ||
-                                fileName.endsWith('.rar') || fileName.endsWith('.7z') ||
-                                fileName.endsWith('.xls') || fileName.endsWith('.xlsx') ||
-                                fileName.endsWith('.ppt') || fileName.endsWith('.pptx');
-
-        const hasValidMimeType = allowedTypes.includes(file.type);
-
-        if (!hasValidExtension && !hasValidMimeType) {
-            this.showNotification(`File "${file.name}" has an unsupported format.`, 'error');
-            return false;
-        }
-
-        return true;
-    }
-
     handleFileSelect(files) {
         // Validate files
         const validFiles = files.filter(file => this.validateFile(file));
@@ -381,7 +311,7 @@ class FileManager {
         // Check extension with proper Unicode support
         const extension = '.' + file.name.split('.').pop().toLowerCase();
         if (!allowedExtensions.includes(extension)) {
-            const supportedTypes = 'PDF, DWG, DXF, Images, Excel (XLS/XLSX), Word, PowerPoint, ZIP';
+            const supportedTypes = 'PDF, DWG, DXF, Images (JPG, PNG, GIF, WebP), Excel (XLS/XLSX), Word, PowerPoint, ZIP, RAR, 7Z, TXT';
             this.showNotification(`نوع الملف "${extension}" غير مدعوم / File type "${extension}" not supported. Supported: ${supportedTypes}`, 'error');
             return false;
         }
@@ -747,19 +677,29 @@ class FileManager {
             const versions = await response.json();
             
             versionsModalBody.innerHTML = versions.map(version => `
-                <div class="version-item">
+                <div class="version-item" id="version-${version.fileId}">
                     <div class="version-info">
                         <h4>${version.originalName}</h4>
                         <p><i class="fas fa-calendar"></i> Uploaded: ${this.formatDate(version.uploadedAt)}</p>
                         <p><i class="fas fa-hdd"></i> Size: ${this.formatFileSize(version.size)}</p>
-                        ${version.description ? `<p><strong>Description:</strong> ${version.description}</p>` : ''}
-                        ${version.tags ? `<p><strong>Tags:</strong> ${Array.isArray(version.tags) ? version.tags.join(', ') : version.tags}</p>` : ''}
+                        <div class="version-description" id="desc-${version.fileId}">
+                            ${version.description ? `<p><strong>Description:</strong> <span class="desc-text">${version.description}</span></p>` : '<p><strong>Description:</strong> <span class="desc-text no-content">No description</span></p>'}
+                        </div>
+                        <div class="version-tags" id="tags-${version.fileId}">
+                            ${version.tags ? `<p><strong>Tags:</strong> <span class="tags-text">${Array.isArray(version.tags) ? version.tags.join(', ') : version.tags}</span></p>` : '<p><strong>Tags:</strong> <span class="tags-text no-content">No tags</span></p>'}
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px; align-items: center;">
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         ${version.isLatest ? '<span class="version-badge latest">Latest</span>' : '<span class="version-badge">v' + version.version + '</span>'}
+                        <button class="action-btn edit-btn" onclick="fileManager.editVersionMeta('${version.fileId}', '${baseName}')" title="Edit description & tags">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button class="action-btn download-btn" onclick="fileManager.downloadFile('${version.fileId}', '${version.originalName}')" title="Download this version">
                             <i class="fas fa-download"></i>
                         </button>
+                        ${!version.isLatest ? `<button class="action-btn delete-btn" onclick="fileManager.deleteVersion('${version.fileId}', '${baseName}')" title="Delete this version">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -866,6 +806,131 @@ class FileManager {
         } catch (error) {
             console.error('Delete error:', error);
             this.showNotification('Failed to delete file', 'error');
+        }
+    }
+
+    // Edit version metadata (description and tags)
+    editVersionMeta(fileId, baseName) {
+        const descElement = document.querySelector(`#desc-${fileId} .desc-text`);
+        const tagsElement = document.querySelector(`#tags-${fileId} .tags-text`);
+        
+        const currentDesc = descElement.textContent === 'No description' ? '' : descElement.textContent;
+        const currentTags = tagsElement.textContent === 'No tags' ? '' : tagsElement.textContent;
+
+        // Create inline edit form
+        const editForm = `
+            <div class="edit-meta-form" id="edit-form-${fileId}">
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="edit-desc-${fileId}" placeholder="Enter file description..." maxlength="500">${currentDesc}</textarea>
+                    <div class="char-count"><span id="desc-count-${fileId}">${currentDesc.length}</span>/500</div>
+                </div>
+                <div class="form-group">
+                    <label>Tags:</label>
+                    <input type="text" id="edit-tags-${fileId}" placeholder="e.g., important, work, pdf" maxlength="100" value="${currentTags}">
+                    <div class="char-count"><span id="tags-count-${fileId}">${currentTags.length}</span>/100</div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-primary" onclick="fileManager.saveVersionMeta('${fileId}', '${baseName}')">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button class="btn-secondary" onclick="fileManager.cancelEditMeta('${fileId}', '${currentDesc}', '${currentTags}')">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Replace the description and tags sections with the edit form
+        const versionItem = document.getElementById(`version-${fileId}`);
+        const versionInfo = versionItem.querySelector('.version-info');
+        
+        // Hide original content and show edit form
+        document.getElementById(`desc-${fileId}`).style.display = 'none';
+        document.getElementById(`tags-${fileId}`).style.display = 'none';
+        
+        // Insert edit form
+        const editContainer = document.createElement('div');
+        editContainer.innerHTML = editForm;
+        versionInfo.appendChild(editContainer.firstElementChild);
+
+        // Add character counting
+        document.getElementById(`edit-desc-${fileId}`).addEventListener('input', (e) => {
+            document.getElementById(`desc-count-${fileId}`).textContent = e.target.value.length;
+        });
+        
+        document.getElementById(`edit-tags-${fileId}`).addEventListener('input', (e) => {
+            document.getElementById(`tags-count-${fileId}`).textContent = e.target.value.length;
+        });
+    }
+
+    // Save updated metadata
+    async saveVersionMeta(fileId, baseName) {
+        const newDesc = document.getElementById(`edit-desc-${fileId}`).value.trim();
+        const newTags = document.getElementById(`edit-tags-${fileId}`).value.trim();
+
+        try {
+            const response = await fetch(`/api/files/${fileId}/metadata`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    description: newDesc,
+                    tags: newTags
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update metadata');
+            }
+
+            this.showNotification('Metadata updated successfully', 'success');
+            // Refresh the versions modal to show updated data
+            await this.showVersions(baseName);
+            
+        } catch (error) {
+            console.error('Update metadata error:', error);
+            this.showNotification('Failed to update metadata', 'error');
+        }
+    }
+
+    // Cancel edit and restore original content
+    cancelEditMeta(fileId, originalDesc, originalTags) {
+        // Remove edit form
+        const editForm = document.getElementById(`edit-form-${fileId}`);
+        if (editForm) {
+            editForm.remove();
+        }
+
+        // Show original content
+        document.getElementById(`desc-${fileId}`).style.display = 'block';
+        document.getElementById(`tags-${fileId}`).style.display = 'block';
+    }
+
+    // Delete specific version
+    async deleteVersion(fileId, baseName) {
+        if (!confirm('Are you sure you want to delete this version? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/files/${fileId}/version`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete version');
+            }
+
+            this.showNotification('Version deleted successfully', 'success');
+            // Refresh the versions modal and main file list
+            await this.showVersions(baseName);
+            this.loadFiles();
+            
+        } catch (error) {
+            console.error('Delete version error:', error);
+            this.showNotification('Failed to delete version', 'error');
         }
     }
 

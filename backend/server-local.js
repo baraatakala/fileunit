@@ -468,6 +468,45 @@ app.delete('/api/files/:fileId', async (req, res) => {
     }
 });
 
+// Update file metadata (description and tags)
+app.put('/api/files/:fileId/metadata', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        const { description, tags } = req.body;
+        
+        console.log('Updating metadata for file ID:', fileId);
+        console.log('New description:', description);
+        console.log('New tags:', tags);
+        
+        // Update metadata in Supabase
+        const updateResult = await supabaseService.updateFileMetadata(fileId, description, tags);
+        
+        res.json({ success: true, message: 'Metadata updated successfully' });
+        
+    } catch (error) {
+        console.error('Update metadata error:', error);
+        res.status(500).json({ error: 'Failed to update metadata', details: error.message });
+    }
+});
+
+// Delete specific version
+app.delete('/api/files/:fileId/version', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        
+        console.log('Attempting to delete version with ID:', fileId);
+        
+        // Use Supabase service to delete the specific version
+        const deleteResult = await supabaseService.deleteFileVersion(fileId);
+        
+        res.json({ success: true, message: 'Version deleted successfully' });
+        
+    } catch (error) {
+        console.error('Delete version error:', error);
+        res.status(500).json({ error: 'Failed to delete version', details: error.message });
+    }
+});
+
 // Health check endpoints
 app.get('/api/health', async (req, res) => {
     try {
