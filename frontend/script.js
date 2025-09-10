@@ -904,7 +904,8 @@ class FileManager {
         const previewModalBody = document.getElementById('previewModalBody');
         
         try {
-            const downloadUrl = `/api/download/${fileId}`;
+            // Use preview endpoint for inline display
+            const previewUrl = `/api/preview/${fileId}`;
             
             previewModalBody.innerHTML = `
                 <div class="preview-container">
@@ -913,7 +914,7 @@ class FileManager {
                     </div>
                     <div class="zoom-container">
                         <div class="zoom-info" id="zoomInfo">100%</div>
-                        <img class="preview-image zoomable" src="${downloadUrl}" alt="${filename}" 
+                        <img class="preview-image zoomable" src="${previewUrl}" alt="${filename}" 
                              onload="this.style.opacity='1'" 
                              onerror="fileManager.showPreviewError('${filename}', 'Failed to load image')"
                              style="opacity: 0; transition: opacity 0.3s ease;">
@@ -924,6 +925,9 @@ class FileManager {
             // Add pan and zoom functionality
             this.addImageInteractivity();
             
+            // Update file info with actual size
+            await this.updatePreviewFileInfo(fileId, filename);
+            
         } catch (error) {
             this.showPreviewError(filename, error.message);
         }
@@ -933,14 +937,15 @@ class FileManager {
         const previewModalBody = document.getElementById('previewModalBody');
         
         try {
-            const downloadUrl = `/api/download/${fileId}`;
+            // Use preview endpoint for inline display
+            const previewUrl = `/api/preview/${fileId}`;
             
             previewModalBody.innerHTML = `
                 <div class="preview-container">
                     <div class="preview-type-indicator">
                         <i class="fas fa-file-pdf"></i> PDF
                     </div>
-                    <iframe class="preview-pdf" src="${downloadUrl}" type="application/pdf">
+                    <iframe class="preview-pdf" src="${previewUrl}" type="application/pdf">
                         <div class="preview-error">
                             <i class="fas fa-exclamation-triangle"></i>
                             <h3>PDF Preview Not Available</h3>
@@ -952,6 +957,9 @@ class FileManager {
                     </iframe>
                 </div>
             `;
+            
+            // Update file info with actual size
+            await this.updatePreviewFileInfo(fileId, filename);
         } catch (error) {
             this.showPreviewError(filename, error.message);
         }
@@ -1255,6 +1263,23 @@ class FileManager {
     downloadFromPreview() {
         if (this.currentPreviewFile) {
             this.downloadFile(this.currentPreviewFile.fileId, this.currentPreviewFile.filename);
+        }
+    }
+
+    // Update preview file info with actual size from server
+    async updatePreviewFileInfo(fileId, filename) {
+        try {
+            const response = await fetch(`/api/files`);
+            if (response.ok) {
+                const files = await response.json();
+                const file = files.find(f => f.fileId === fileId);
+                if (file) {
+                    const previewFileInfo = document.getElementById('previewFileInfo');
+                    previewFileInfo.textContent = `${filename} • ${this.formatFileSize(file.size)}`;
+                }
+            }
+        } catch (error) {
+            console.warn('Could not update file info:', error);
         }
     }
 

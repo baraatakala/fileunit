@@ -99,28 +99,52 @@ const upload = multer({
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = [
+            // Documents
             'application/pdf',
-            'image/jpeg',
-            'image/jpg', 
-            'image/png',
-            'application/zip',
-            'application/x-zip-compressed',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'text/plain',
+            
+            // Images
+            'image/jpeg',
+            'image/jpg', 
+            'image/png',
+            'image/gif',
+            'image/webp',
+            
+            // Archives
+            'application/zip',
+            'application/x-zip-compressed',
+            'application/x-rar-compressed',
+            'application/x-7z-compressed',
+            
+            // Excel Files
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            
+            // PowerPoint Files
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            
+            // CAD Files
             'application/octet-stream', // For .dwg files
             'application/x-autocad', // For .dwg files
             'image/vnd.dwg', // For .dwg files
-            'application/x-dwg' // For .dwg files
+            'application/x-dwg', // For .dwg files
+            'application/dwg',
+            'application/dxf'
         ];
 
-        const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.zip', '.doc', '.docx', '.txt', '.dwg', '.dxf'];
+        const allowedExtensions = [
+            '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.zip', '.rar', '.7z',
+            '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx', '.dwg', '.dxf'
+        ];
         const fileExtension = path.extname(file.originalname).toLowerCase();
         
         if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
             cb(null, true);
         } else {
-            cb(new Error(`File type not supported. Allowed types: ${allowedExtensions.join(', ')}`));
+            cb(new Error(`نوع الملف غير مدعوم / File type not supported: ${fileExtension}. Supported: ${allowedExtensions.join(', ')}`));
         }
     }
 });

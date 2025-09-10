@@ -355,6 +355,95 @@ app.get('/api/download/:fileId', async (req, res) => {
     }
 });
 
+// Preview file endpoint - serves files inline for browser preview
+app.get('/api/preview/:fileId', async (req, res) => {
+    try {
+        const { fileId } = req.params;
+        
+        console.log('Getting preview for file ID:', fileId);
+        
+        // Get file info from Supabase
+        let fileData, fetchError;
+        try {
+            const response = await supabaseService.supabase
+                .from('files')
+                .select('*')
+                .eq('id', fileId);
+            fileData = response.data;
+            fetchError = response.error;
+        } catch (networkError) {
+            console.error('Network error connecting to Supabase:', networkError.message);
+            return res.status(503).json({ 
+                error: 'Service temporarily unavailable', 
+                details: 'Cannot connect to storage service'
+            });
+        }
+
+        if (fetchError || !fileData || fileData.length === 0) {
+            console.error('File not found for ID:', fileId, fetchError);
+            return res.status(404).json({ error: 'File not found' });
+        }
+
+        const file = fileData[0];
+        console.log('Found file for preview:', file.filename, 'at path:', file.file_path);
+        
+        // Get signed URL for preview
+        let signedUrlData, urlError;
+        try {
+            const response = await supabaseService.supabase.storage
+                .from('construction-files')
+                .createSignedUrl(file.file_path, 3600); // 1 hour expiry
+            signedUrlData = response.data;
+            urlError = response.error;
+        } catch (networkError) {
+            console.error('Network error getting signed URL:', networkError.message);
+            return res.status(503).json({ 
+                error: 'Service temporarily unavailable', 
+                details: 'Cannot generate preview link'
+            });
+        }
+
+        if (urlError || !signedUrlData) {
+            console.error('Error creating signed URL:', urlError);
+            return res.status(500).json({ error: 'Failed to generate preview URL' });
+        }
+
+        console.log('Generated signed URL for preview');
+        
+        // Fetch the file and stream it for inline display
+        const fetch = require('node-fetch');
+        try {
+            const fileResponse = await fetch(signedUrlData.signedUrl);
+            
+            if (!fileResponse.ok) {
+                throw new Error(`HTTP error! status: ${fileResponse.status}`);
+            }
+            
+            // Set proper headers for inline display (not attachment)
+            res.setHeader('Content-Type', file.content_type || 'application/octet-stream');
+            res.setHeader('Content-Length', fileResponse.headers.get('content-length') || '0');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+            
+            // For PDFs and images, allow inline display
+            if (file.content_type && (file.content_type.includes('pdf') || file.content_type.includes('image'))) {
+                res.setHeader('Content-Disposition', 'inline');
+            }
+            
+            // Stream the file buffer
+            const buffer = await fileResponse.buffer();
+            res.end(buffer);
+            
+        } catch (streamError) {
+            console.error('Error streaming file for preview:', streamError.message);
+            return res.status(500).json({ error: 'Failed to preview file', details: streamError.message });
+        }
+        
+    } catch (error) {
+        console.error('Preview route error:', error);
+        res.status(500).json({ error: 'Preview failed', details: error.message });
+    }
+});
+
 // Delete file
 app.delete('/api/files/:fileId', async (req, res) => {
     try {
